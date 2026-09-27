@@ -1,0 +1,11 @@
+.git
+.env
+.agents
+resin
+sing-box-reference
+node_modules
+webui/node_modules
+webui/dist
+.vscode
+*.log
+.data/

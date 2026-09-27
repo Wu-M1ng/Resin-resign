@@ -1,0 +1,26 @@
+/resin
+.env
+sing-box-reference
+.agents
+.devcontainer
+start-instance.sh
+
+# Local dependencies and build output
+node_modules/
+webui/node_modules/
+webui/dist/
+dist/
+build/
+
+# Local runtime state and logs
+.data/
+data/
+*.db
+*.db-shm
+*.db-wal
+*.log
+
+# Claude Code / OMC tooling and local runtime data
+.claude/
+.omc/
+.local/
