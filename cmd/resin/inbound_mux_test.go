@@ -103,6 +103,8 @@ func TestInboundMux_RoutesAPIForControlPlanePaths(t *testing.T) {
 		"/ui",
 		"/ui/",
 		"/ui/platforms/demo",
+		"/sub/feed-token",
+		"/sub/feed-token/clash-meta",
 	}
 	for _, path := range cases {
 		t.Run(path, func(t *testing.T) {

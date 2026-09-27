@@ -2616,6 +2616,7 @@ a {
 }
 
 .feeds-format-check,
+.feeds-source-mode,
 .feeds-switch-item {
   display: flex;
   align-items: center;
@@ -2631,6 +2632,16 @@ a {
 }
 
 .feeds-format-check {
+  justify-content: flex-start;
+}
+
+.feeds-source-modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.feeds-source-mode {
   justify-content: flex-start;
 }
 
@@ -2673,6 +2684,10 @@ a {
   }
 
   .feeds-format-checks {
+    grid-template-columns: 1fr;
+  }
+
+  .feeds-source-modes {
     grid-template-columns: 1fr;
   }
 }

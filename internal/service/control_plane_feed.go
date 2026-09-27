@@ -15,6 +15,7 @@ import (
 	"github.com/Resinat/Resin/internal/model"
 	"github.com/Resinat/Resin/internal/node"
 	"github.com/Resinat/Resin/internal/state"
+	"github.com/Resinat/Resin/internal/subscription"
 	"github.com/google/uuid"
 )
 
@@ -90,12 +91,14 @@ func encodeFeedStrings(values []string) string {
 	return string(b)
 }
 
-func validateFeedSettings(name, platformID, defaultFormat string, formats []string, policy string) *ServiceError {
+func validateFeedSettings(name, platformID string, subscriptionIDs []string, defaultFormat string, formats []string, policy string) *ServiceError {
 	if strings.TrimSpace(name) == "" {
 		return invalidArg("name is required")
 	}
-	if strings.TrimSpace(platformID) == "" {
-		return invalidArg("platform_id is required")
+	hasPlatform := strings.TrimSpace(platformID) != ""
+	hasSubscriptions := len(subscriptionIDs) > 0
+	if hasPlatform == hasSubscriptions {
+		return invalidArg("exactly one of platform_id or subscription_ids is required")
 	}
 	if len(formats) == 0 {
 		return invalidArg("enabled_formats must contain at least one format")
@@ -197,6 +200,7 @@ func (s *ControlPlaneService) GetFeed(id string) (*FeedResponse, error) {
 }
 
 func (s *ControlPlaneService) CreateFeed(req CreateFeedRequest) (*FeedResponse, error) {
+	req.PlatformID = strings.TrimSpace(req.PlatformID)
 	for i := range req.EnabledFormats {
 		req.EnabledFormats[i] = strings.ToLower(strings.TrimSpace(req.EnabledFormats[i]))
 	}
@@ -207,11 +211,13 @@ func (s *ControlPlaneService) CreateFeed(req CreateFeedRequest) (*FeedResponse, 
 	if req.UnsupportedPolicy == "" {
 		req.UnsupportedPolicy = string(feed.UnsupportedSkip)
 	}
-	if verr := validateFeedSettings(req.Name, req.PlatformID, req.DefaultFormat, req.EnabledFormats, req.UnsupportedPolicy); verr != nil {
+	if verr := validateFeedSettings(req.Name, req.PlatformID, req.SubscriptionIDs, req.DefaultFormat, req.EnabledFormats, req.UnsupportedPolicy); verr != nil {
 		return nil, verr
 	}
-	if verr := s.validateFeedPlatform(req.PlatformID); verr != nil {
-		return nil, verr
+	if req.PlatformID != "" {
+		if verr := s.validateFeedPlatform(req.PlatformID); verr != nil {
+			return nil, verr
+		}
 	}
 	if verr := s.validateFeedSubscriptions(req.SubscriptionIDs); verr != nil {
 		return nil, verr
@@ -252,6 +258,7 @@ func (s *ControlPlaneService) UpdateFeed(id string, raw json.RawMessage) (*FeedR
 	req.Name, req.PlatformID, req.DefaultFormat, req.UnsupportedPolicy, req.Pretty, req.Enabled = m.Name, m.PlatformID, m.DefaultFormat, m.UnsupportedPolicy, m.Pretty, &m.Enabled
 	req.EnabledFormats, _ = decodeFeedFormats(m.EnabledFormatsJSON)
 	req.SubscriptionIDs, _ = decodeFeedFormats(m.SubscriptionIDsJSON)
+	sourcePatched := false
 	for key, value := range patch {
 		if string(value) == "null" {
 			return nil, invalidArg(fmt.Sprintf("field %q cannot be null", key))
@@ -262,10 +269,12 @@ func (s *ControlPlaneService) UpdateFeed(id string, raw json.RawMessage) (*FeedR
 				return nil, invalidArg("name must be a string")
 			}
 		case "platform_id":
+			sourcePatched = true
 			if err := json.Unmarshal(value, &req.PlatformID); err != nil {
 				return nil, invalidArg("platform_id must be a string")
 			}
 		case "subscription_ids":
+			sourcePatched = true
 			if err := json.Unmarshal(value, &req.SubscriptionIDs); err != nil {
 				return nil, invalidArg("subscription_ids must be an array")
 			}
@@ -295,6 +304,7 @@ func (s *ControlPlaneService) UpdateFeed(id string, raw json.RawMessage) (*FeedR
 			return nil, invalidArg(fmt.Sprintf("field %q is unknown or read-only", key))
 		}
 	}
+	req.PlatformID = strings.TrimSpace(req.PlatformID)
 	for i := range req.EnabledFormats {
 		req.EnabledFormats[i] = strings.ToLower(strings.TrimSpace(req.EnabledFormats[i]))
 	}
@@ -305,11 +315,19 @@ func (s *ControlPlaneService) UpdateFeed(id string, raw json.RawMessage) (*FeedR
 	if req.UnsupportedPolicy == "" {
 		req.UnsupportedPolicy = string(feed.UnsupportedSkip)
 	}
-	if verr := validateFeedSettings(req.Name, req.PlatformID, req.DefaultFormat, req.EnabledFormats, req.UnsupportedPolicy); verr != nil {
-		return nil, verr
+	if verr := validateFeedSettings(req.Name, req.PlatformID, req.SubscriptionIDs, req.DefaultFormat, req.EnabledFormats, req.UnsupportedPolicy); verr != nil {
+		// Feeds created before source modes were exclusive may contain both
+		// fields. Keep those records editable when the patch does not touch the
+		// source selection; any new source selection must satisfy the XOR rule.
+		legacyCombined := !sourcePatched && req.PlatformID != "" && len(req.SubscriptionIDs) > 0
+		if !legacyCombined {
+			return nil, verr
+		}
 	}
-	if verr := s.validateFeedPlatform(req.PlatformID); verr != nil {
-		return nil, verr
+	if req.PlatformID != "" {
+		if verr := s.validateFeedPlatform(req.PlatformID); verr != nil {
+			return nil, verr
+		}
 	}
 	if verr := s.validateFeedSubscriptions(req.SubscriptionIDs); verr != nil {
 		return nil, verr
@@ -383,10 +401,6 @@ func nextFeedUpdatedAt(previous int64) int64 {
 }
 
 func (s *ControlPlaneService) buildFeedNodes(m model.SubscriptionFeed) ([]feed.ExportNode, error) {
-	plat, ok := s.Pool.GetPlatform(m.PlatformID)
-	if !ok || plat == nil {
-		return nil, notFound("platform not found")
-	}
 	allowedSubs := map[string]struct{}{}
 	if m.SubscriptionIDsJSON != "" {
 		ids, err := decodeFeedFormats(m.SubscriptionIDsJSON)
@@ -396,6 +410,13 @@ func (s *ControlPlaneService) buildFeedNodes(m model.SubscriptionFeed) ([]feed.E
 		for _, id := range ids {
 			allowedSubs[id] = struct{}{}
 		}
+	}
+	if strings.TrimSpace(m.PlatformID) == "" {
+		return s.buildSubscriptionFeedNodes(allowedSubs)
+	}
+	plat, ok := s.Pool.GetPlatform(m.PlatformID)
+	if !ok || plat == nil {
+		return nil, notFound("platform not found")
 	}
 	items := make([]feed.ExportNode, 0, plat.View().Size())
 	plat.View().Range(func(h node.Hash) bool {
@@ -432,6 +453,61 @@ func (s *ControlPlaneService) buildFeedNodes(m model.SubscriptionFeed) ([]feed.E
 		items = append(items, feed.ExportNode{Hash: h, Tag: tag, RawOptions: append([]byte(nil), entry.RawOptions...), Region: entry.GetRegion(nil)})
 		return true
 	})
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].Tag == items[j].Tag {
+			return items[i].Hash.Hex() < items[j].Hash.Hex()
+		}
+		return items[i].Tag < items[j].Tag
+	})
+	return items, nil
+}
+
+// buildSubscriptionFeedNodes exports nodes directly from the selected source
+// subscriptions. This mode intentionally does not require a platform's
+// health/routing view, so a feed can expose refreshed source nodes before a
+// platform has accepted them into its routable set.
+func (s *ControlPlaneService) buildSubscriptionFeedNodes(allowedSubs map[string]struct{}) ([]feed.ExportNode, error) {
+	if len(allowedSubs) == 0 {
+		return nil, invalidArg("subscription_ids is required when platform_id is empty")
+	}
+	if s.SubMgr == nil || s.Pool == nil {
+		return nil, internal("subscription service unavailable", nil)
+	}
+
+	hashes := make(map[node.Hash]struct{})
+	for id := range allowedSubs {
+		sub := s.SubMgr.Lookup(id)
+		if sub == nil {
+			return nil, notFound("subscription not found")
+		}
+		if !sub.Enabled() {
+			continue
+		}
+		sub.ManagedNodes().RangeNodes(func(hash node.Hash, managed subscription.ManagedNode) bool {
+			if !managed.Evicted {
+				hashes[hash] = struct{}{}
+			}
+			return true
+		})
+	}
+
+	items := make([]feed.ExportNode, 0, len(hashes))
+	for hash := range hashes {
+		entry, ok := s.Pool.GetEntry(hash)
+		if !ok || entry == nil {
+			continue
+		}
+		tag := s.resolveFeedTag(entry, hash, allowedSubs)
+		if tag == "" {
+			tag = hash.Hex()
+		}
+		items = append(items, feed.ExportNode{
+			Hash:       hash,
+			Tag:        tag,
+			RawOptions: append([]byte(nil), entry.RawOptions...),
+			Region:     entry.GetRegion(nil),
+		})
+	}
 	sort.Slice(items, func(i, j int) bool {
 		if items[i].Tag == items[j].Tag {
 			return items[i].Hash.Hex() < items[j].Hash.Hex()

@@ -71,7 +71,7 @@ func TestPublicFeedLifecycleKeepsTokenAcrossEdits(t *testing.T) {
 	}
 
 	updated := doJSONRequest(t, srv, http.MethodPatch, "/api/v1/feeds/"+feedID, map[string]any{
-		"subscription_ids": []string{sub.ID},
+		"pretty": false,
 	}, true)
 	if updated.Code != http.StatusOK {
 		t.Fatalf("edit feed status: got %d, body=%s", updated.Code, updated.Body.String())
@@ -102,6 +102,67 @@ func TestPublicFeedLifecycleKeepsTokenAcrossEdits(t *testing.T) {
 	newDisabled := publicFeedRequest(srv, http.MethodGet, "/sub/"+newToken+"/uri", "")
 	if newDisabled.Code != http.StatusNotFound {
 		t.Fatalf("disabled token status: got %d", newDisabled.Code)
+	}
+}
+
+func TestPublicFeedCanUseOriginalSubscriptionSourceWithoutPlatform(t *testing.T) {
+	srv, cp, _ := newControlPlaneTestServer(t)
+	sub := subscription.NewSubscription("source-only-sub", "Source only", "https://example.com/feed", true, false)
+	cp.SubMgr.Register(sub)
+	raw := []byte(`{"type":"http","server":"example.com","server_port":80}`)
+	hash := node.HashFromRawOptions(raw)
+	cp.Pool.AddNodeFromSub(hash, raw, sub.ID)
+	sub.ManagedNodes().StoreNode(hash, subscription.ManagedNode{Tags: []string{"source-node"}})
+
+	created := doJSONRequest(t, srv, http.MethodPost, "/api/v1/feeds", map[string]any{
+		"name":               "Source-only feed",
+		"platform_id":        "",
+		"subscription_ids":   []string{sub.ID},
+		"default_format":     "uri",
+		"enabled_formats":    []string{"uri"},
+		"unsupported_policy": "skip",
+	}, true)
+	if created.Code != http.StatusCreated {
+		t.Fatalf("create source-only feed status: got %d, body=%s", created.Code, created.Body.String())
+	}
+	body := decodeJSONMap(t, created)
+	token, _ := body["public_token"].(string)
+	if token == "" {
+		t.Fatalf("source-only feed response missing token: %s", created.Body)
+	}
+
+	public := publicFeedRequest(srv, http.MethodGet, "/sub/"+token+"/uri", "")
+	if public.Code != http.StatusOK || public.Body.Len() == 0 {
+		t.Fatalf("source-only public feed response: status=%d body=%q", public.Code, public.Body.String())
+	}
+}
+
+func TestCreateFeedRequiresExactlyOneSource(t *testing.T) {
+	srv, _, _ := newControlPlaneTestServer(t)
+	base := map[string]any{
+		"name":               "Invalid source selection",
+		"default_format":     "uri",
+		"enabled_formats":    []string{"uri"},
+		"unsupported_policy": "skip",
+	}
+
+	for name, source := range map[string]map[string]any{
+		"neither": {"platform_id": "", "subscription_ids": []string{}},
+		"both":    {"platform_id": "missing-platform", "subscription_ids": []string{"missing-subscription"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			request := make(map[string]any, len(base)+len(source))
+			for key, value := range base {
+				request[key] = value
+			}
+			for key, value := range source {
+				request[key] = value
+			}
+			rec := doJSONRequest(t, srv, http.MethodPost, "/api/v1/feeds", request, true)
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("status: got %d, want %d, body=%s", rec.Code, http.StatusBadRequest, rec.Body.String())
+			}
+		})
 	}
 }
 

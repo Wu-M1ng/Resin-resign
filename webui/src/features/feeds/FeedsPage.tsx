@@ -27,6 +27,8 @@ import {
 } from "./api";
 import type { FeedFormat, FeedInput, FeedPreview, SubscriptionFeed } from "./types";
 
+type FeedSourceMode = "platform" | "subscriptions";
+
 const FORMATS: Array<{ value: FeedFormat; label: string }> = [
   { value: "clash-meta", label: "Clash Meta / Mihomo" },
   { value: "singbox", label: "sing-box JSON" },
@@ -73,6 +75,7 @@ export function FeedsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<SubscriptionFeed | null>(null);
   const [form, setForm] = useState<FeedInput>(DEFAULT_FORM);
+  const [sourceMode, setSourceMode] = useState<FeedSourceMode>("platform");
   const [token, setToken] = useState<{ feed: SubscriptionFeed; value: string } | null>(null);
   const [preview, setPreview] = useState<FeedPreview | null>(null);
   const [previewFeedID, setPreviewFeedID] = useState<string | null>(null);
@@ -146,13 +149,23 @@ export function FeedsPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ ...DEFAULT_FORM, platform_id: platforms[0]?.id ?? "", subscription_ids: [] });
+    setSourceMode("platform");
+    setForm({ ...DEFAULT_FORM });
     setModalOpen(true);
   };
   const openEdit = (feed: SubscriptionFeed) => {
     setEditing(feed);
+    setSourceMode(feed.platform_id ? "platform" : "subscriptions");
     setForm(toForm(feed));
     setModalOpen(true);
+  };
+  const chooseSourceMode = (mode: FeedSourceMode) => {
+    setSourceMode(mode);
+    setForm((current) => ({
+      ...current,
+      platform_id: mode === "platform" ? current.platform_id : "",
+      subscription_ids: mode === "subscriptions" ? current.subscription_ids : [],
+    }));
   };
   const toggleFormat = (format: FeedFormat) => {
     setForm((current) => {
@@ -169,15 +182,17 @@ export function FeedsPage() {
       showToast("error", t("订阅输出名称不能为空"));
       return;
     }
-    if (!form.platform_id) {
-      showToast("error", t("请选择平台"));
+    const platformID = sourceMode === "platform" ? form.platform_id.trim() : "";
+    const subscriptionIDs = sourceMode === "subscriptions" ? form.subscription_ids : [];
+    if (!platformID && !subscriptionIDs.length) {
+      showToast("error", t("请选择一个节点来源"));
       return;
     }
     if (!form.enabled_formats.length) {
       showToast("error", t("至少启用一种输出格式"));
       return;
     }
-    const input = { ...form, name: form.name.trim() };
+    const input = { ...form, name: form.name.trim(), platform_id: platformID, subscription_ids: subscriptionIDs };
     if (editing) {
       updateMutation.mutate({ id: editing.id, input });
     } else {
@@ -198,7 +213,7 @@ export function FeedsPage() {
       <header className="module-header">
         <div>
           <h2>{t("订阅输出")}</h2>
-          <p className="module-description">{t("将节点池按平台整理为客户端可直接使用的订阅地址。")}</p>
+          <p className="module-description">{t("将节点池按平台或原始订阅来源整理为客户端可直接使用的订阅地址。")}</p>
         </div>
       </header>
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
@@ -219,12 +234,14 @@ export function FeedsPage() {
         {feeds.length ? (
           <div className="data-table-wrap feeds-table-wrap">
             <table className="data-table feeds-table">
-              <thead><tr><th>{t("名称")}</th><th>{t("平台")}</th><th>{t("输出格式")}</th><th>{t("状态")}</th><th>{t("令牌")}</th><th>{t("更新时间")}</th><th>{t("操作")}</th></tr></thead>
+              <thead><tr><th>{t("名称")}</th><th>{t("来源")}</th><th>{t("输出格式")}</th><th>{t("状态")}</th><th>{t("令牌")}</th><th>{t("更新时间")}</th><th>{t("操作")}</th></tr></thead>
               <tbody>
                 {feeds.map((feed) => (
                   <tr key={feed.id}>
                     <td><strong>{feed.name}</strong></td>
-                    <td>{platforms.find((item) => item.id === feed.platform_id)?.name ?? (feed.platform_id || t("未知平台"))}</td>
+                    <td>{feed.platform_id
+                      ? (platforms.find((item) => item.id === feed.platform_id)?.name ?? feed.platform_id)
+                      : (feed.subscription_ids.map((id) => subscriptions.find((item) => item.id === id)?.name ?? id).join(", ") || t("未选择来源"))}</td>
                     <td><div className="feeds-format-list">{feed.enabled_formats.map((format) => <Badge key={format} variant={format === feed.default_format ? "info" : "neutral"}>{formatLabel(format, t)}</Badge>)}</div></td>
                     <td><Badge variant={feed.enabled ? "success" : "muted"}>{feed.enabled ? t("已启用") : t("已停用")}</Badge></td>
                     <td><code className="feeds-token-prefix">{feed.token_prefix ? `${feed.token_prefix}...` : t("未生成")}</code></td>
@@ -257,8 +274,8 @@ export function FeedsPage() {
         <div className="modal-header"><h3>{editing ? t("编辑整合订阅") : t("新建整合订阅")}</h3><Button variant="ghost" size="sm" onClick={() => setModalOpen(false)} aria-label={t("关闭")}><X size={16} /></Button></div>
         <div className="form-grid">
           <div className="field-group field-span-2"><label className="field-label" htmlFor="feed-name">{t("名称")}</label><Input id="feed-name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder={t("例如：全部节点")} /></div>
-          <div className="field-group field-span-2"><label className="field-label" htmlFor="feed-platform">{t("节点平台")}</label><Select id="feed-platform" value={form.platform_id} onChange={(event) => setForm({ ...form, platform_id: event.target.value })}><option value="">{t("请选择平台")}</option>{platforms.map((platform) => <option key={platform.id} value={platform.id}>{platform.name} ({platform.routable_node_count})</option>)}</Select>{selectedPlatform ? <p className="muted">{t("当前平台有 {{count}} 个可路由节点", { count: selectedPlatform.routable_node_count })}</p> : null}</div>
-          <div className="field-group field-span-2"><span className="field-label">{t("原始订阅来源")}</span><p className="muted">{t("不选择时使用该平台的全部订阅节点")}</p><div className="feeds-format-checks">{subscriptions.map((subscription) => <label key={subscription.id} className="feeds-format-check"><input type="checkbox" checked={form.subscription_ids.includes(subscription.id)} onChange={() => toggleSubscription(subscription.id)} /><span>{subscription.name}</span></label>)}</div></div>
+          <div className="field-group field-span-2"><span className="field-label">{t("节点来源")}</span><p className="muted">{t("平台和原始订阅来源二选一")}</p><div className="feeds-source-modes"><label className="feeds-source-mode"><input type="radio" name="feed-source-mode" checked={sourceMode === "platform"} onChange={() => chooseSourceMode("platform")} /><span>{t("节点平台")}</span></label><label className="feeds-source-mode"><input type="radio" name="feed-source-mode" checked={sourceMode === "subscriptions"} onChange={() => chooseSourceMode("subscriptions")} /><span>{t("原始订阅来源")}</span></label></div></div>
+          {sourceMode === "platform" ? <div className="field-group field-span-2"><label className="field-label" htmlFor="feed-platform">{t("节点平台")}</label><Select id="feed-platform" value={form.platform_id} onChange={(event) => setForm({ ...form, platform_id: event.target.value })}><option value="">{t("请选择平台")}</option>{platforms.map((platform) => <option key={platform.id} value={platform.id}>{platform.name} ({platform.routable_node_count})</option>)}</Select>{selectedPlatform ? <p className="muted">{t("当前平台有 {{count}} 个可路由节点", { count: selectedPlatform.routable_node_count })}</p> : null}</div> : <div className="field-group field-span-2"><span className="field-label">{t("原始订阅来源")}</span><p className="muted">{t("选择一个或多个已启用的原始订阅")}</p><div className="feeds-format-checks">{subscriptions.map((subscription) => <label key={subscription.id} className="feeds-format-check"><input type="checkbox" checked={form.subscription_ids.includes(subscription.id)} onChange={() => toggleSubscription(subscription.id)} /><span>{subscription.name}</span></label>)}</div></div>}
           <div className="field-group field-span-2"><span className="field-label">{t("启用输出格式")}</span><div className="feeds-format-checks">{FORMATS.map((item) => <label key={item.value} className="feeds-format-check"><input type="checkbox" checked={form.enabled_formats.includes(item.value)} onChange={() => toggleFormat(item.value)} /><span>{t(item.label)}</span></label>)}</div></div>
           <div className="field-group"><label className="field-label" htmlFor="feed-default-format">{t("默认格式")}</label><Select id="feed-default-format" value={form.default_format} onChange={(event) => setForm({ ...form, default_format: event.target.value as FeedFormat })}>{form.enabled_formats.map((format) => <option key={format} value={format}>{formatLabel(format, t)}</option>)}</Select></div>
           <div className="field-group"><label className="field-label" htmlFor="feed-policy">{t("不支持协议的处理")}</label><Select id="feed-policy" value={form.unsupported_policy} onChange={(event) => setForm({ ...form, unsupported_policy: event.target.value as FeedInput["unsupported_policy"] })}><option value="skip">{t("跳过并继续输出")}</option><option value="error">{t("报错并拒绝输出")}</option></Select></div>

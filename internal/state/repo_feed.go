@@ -161,9 +161,6 @@ func validateFeed(feed model.SubscriptionFeed) error {
 	if strings.TrimSpace(feed.Name) == "" {
 		return fmt.Errorf("feed name must not be empty")
 	}
-	if strings.TrimSpace(feed.PlatformID) == "" {
-		return fmt.Errorf("feed platform_id must not be empty")
-	}
 	if strings.TrimSpace(feed.DefaultFormat) == "" {
 		return fmt.Errorf("feed default_format must not be empty")
 	}
