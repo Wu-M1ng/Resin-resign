@@ -1,0 +1,1 @@
+-- SQLite column removal is intentionally omitted for compatibility.

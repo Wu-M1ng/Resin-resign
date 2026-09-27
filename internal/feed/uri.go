@@ -119,6 +119,11 @@ func toURI(raw map[string]any, name string) (string, error) {
 		}
 		return scheme + "://" + uriAddress(raw, server, port) + "#" + escapeURIComponent(name), nil
 	case "socks":
+		if tlsMap, ok := raw["tls"].(map[string]any); ok {
+			if enabled, ok := boolValue(tlsMap, "enabled"); ok && enabled {
+				return "", fmt.Errorf("feed: URI cannot represent TLS SOCKS5 outbound %q", name)
+			}
+		}
 		return "socks5://" + uriAddress(raw, server, port) + "#" + escapeURIComponent(name), nil
 	default:
 		return "", fmt.Errorf("feed: URI does not support outbound type %q", typ)

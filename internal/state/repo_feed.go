@@ -23,11 +23,11 @@ func (r *StateRepo) InsertFeed(feed model.SubscriptionFeed) error {
 
 	_, err := r.db.Exec(`
 		INSERT INTO subscription_feeds (
-			id, name, platform_id, subscription_ids_json, default_format, enabled_formats_json,
+			id, name, platform_id, subscription_ids_json, relay_enabled, relay_host, relay_port, relay_tls, relay_server_name, default_format, enabled_formats_json,
 			unsupported_policy, pretty, enabled, token_hash, token_prefix,
 			created_at_ns, updated_at_ns
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, feed.ID, feed.Name, feed.PlatformID, feed.SubscriptionIDsJSON, feed.DefaultFormat, feed.EnabledFormatsJSON,
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, feed.ID, feed.Name, feed.PlatformID, feed.SubscriptionIDsJSON, boolInt(feed.RelayEnabled), feed.RelayHost, feed.RelayPort, boolInt(feed.RelayTLS), feed.RelayServerName, feed.DefaultFormat, feed.EnabledFormatsJSON,
 		feed.UnsupportedPolicy, boolInt(feed.Pretty), boolInt(feed.Enabled),
 		feed.TokenHash, feed.TokenPrefix, feed.CreatedAtNs, feed.UpdatedAtNs)
 	return err
@@ -74,11 +74,11 @@ func (r *StateRepo) UpdateFeed(feed model.SubscriptionFeed) error {
 
 	result, err := r.db.Exec(`
 		UPDATE subscription_feeds SET
-			name = ?, platform_id = ?, subscription_ids_json = ?, default_format = ?, enabled_formats_json = ?,
+			name = ?, platform_id = ?, subscription_ids_json = ?, relay_enabled = ?, relay_host = ?, relay_port = ?, relay_tls = ?, relay_server_name = ?, default_format = ?, enabled_formats_json = ?,
 			unsupported_policy = ?, pretty = ?, enabled = ?, token_hash = ?,
 			token_prefix = ?, updated_at_ns = ?
 		WHERE id = ?
-	`, feed.Name, feed.PlatformID, feed.SubscriptionIDsJSON, feed.DefaultFormat, feed.EnabledFormatsJSON,
+	`, feed.Name, feed.PlatformID, feed.SubscriptionIDsJSON, boolInt(feed.RelayEnabled), feed.RelayHost, feed.RelayPort, boolInt(feed.RelayTLS), feed.RelayServerName, feed.DefaultFormat, feed.EnabledFormatsJSON,
 		feed.UnsupportedPolicy, boolInt(feed.Pretty), boolInt(feed.Enabled),
 		feed.TokenHash, feed.TokenPrefix, feed.UpdatedAtNs, feed.ID)
 	if err != nil {
@@ -120,7 +120,7 @@ func (r *StateRepo) FindEnabledByTokenHash(tokenHash string) (*model.Subscriptio
 	return scanFeed(r.db.QueryRow(feedSelect+" WHERE token_hash = ? AND enabled = 1", tokenHash))
 }
 
-const feedSelect = `SELECT id, name, platform_id, subscription_ids_json, default_format,
+const feedSelect = `SELECT id, name, platform_id, subscription_ids_json, relay_enabled, relay_host, relay_port, relay_tls, relay_server_name, default_format,
 	enabled_formats_json, unsupported_policy, pretty, enabled, token_hash,
 	token_prefix, created_at_ns, updated_at_ns FROM subscription_feeds`
 
@@ -141,9 +141,9 @@ func scanFeed(row *sql.Row) (*model.SubscriptionFeed, error) {
 
 func scanFeedRow(row feedRow) (*model.SubscriptionFeed, error) {
 	var feed model.SubscriptionFeed
-	var pretty, enabled int
+	var pretty, enabled, relayEnabled, relayTLS int
 	if err := row.Scan(
-		&feed.ID, &feed.Name, &feed.PlatformID, &feed.SubscriptionIDsJSON, &feed.DefaultFormat,
+		&feed.ID, &feed.Name, &feed.PlatformID, &feed.SubscriptionIDsJSON, &relayEnabled, &feed.RelayHost, &feed.RelayPort, &relayTLS, &feed.RelayServerName, &feed.DefaultFormat,
 		&feed.EnabledFormatsJSON, &feed.UnsupportedPolicy, &pretty, &enabled,
 		&feed.TokenHash, &feed.TokenPrefix, &feed.CreatedAtNs, &feed.UpdatedAtNs,
 	); err != nil {
@@ -151,6 +151,8 @@ func scanFeedRow(row feedRow) (*model.SubscriptionFeed, error) {
 	}
 	feed.Pretty = pretty != 0
 	feed.Enabled = enabled != 0
+	feed.RelayEnabled = relayEnabled != 0
+	feed.RelayTLS = relayTLS != 0
 	return &feed, nil
 }
 

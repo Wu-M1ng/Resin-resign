@@ -50,6 +50,20 @@ func TestClashMetaPreservesTLSALPNAsList(t *testing.T) {
 	}
 }
 
+func TestClashMetaMapsSocksTLS(t *testing.T) {
+	item := testNode("socks-tls", "resin-relay", `{"type":"socks","server":"resin.example.com","server_port":2261,"version":"5","username":"Warp","password":"secret","tls":{"enabled":true,"server_name":"resin.example.com"}}`)
+	result, err := Export(FormatClashMeta, []ExportNode{item}, ExportOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := string(result.Body)
+	for _, want := range []string{"type: socks5", "tls: true", "sni: resin.example.com", "username: Warp"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("missing %q in SOCKS TLS output: %s", want, body)
+		}
+	}
+}
+
 func TestClashMetaMapsWireGuardAddressesAndPeerKey(t *testing.T) {
 	item := testNode("wg", "wg-node", `{"type":"wireguard","server":"wg.example.com","server_port":51820,"private_key":"private","peer_public_key":"peer","local_address":["10.0.0.2/32","2001:db8::2/128"],"mtu":1280,"peers":[{"public_key":"peer"}]}`)
 	result, err := Export(FormatClashMeta, []ExportNode{item}, ExportOptions{})

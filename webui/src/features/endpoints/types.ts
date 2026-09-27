@@ -3,6 +3,7 @@ export type EndpointStatus = "active" | "starting" | "inactive" | "error" | stri
 export type Endpoint = {
   id: string;
   port: number;
+  listen_address: string;
   enabled: boolean;
   allow_management: boolean;
   allow_proxy: boolean;
@@ -10,6 +11,9 @@ export type Endpoint = {
   allow_http_forward: boolean;
   allow_http_reverse: boolean;
   allow_socks5: boolean;
+  tls_enabled: boolean;
+  tls_cert_file: string;
+  tls_key_file: string;
   source: "environment" | "database" | string;
   read_only: boolean;
   status: EndpointStatus;
@@ -20,6 +24,7 @@ export type Endpoint = {
 
 export type EndpointInput = {
   port: number;
+  listen_address: string;
   enabled: boolean;
   allow_management: boolean;
   allow_proxy: boolean;
@@ -27,6 +32,9 @@ export type EndpointInput = {
   allow_http_forward: boolean;
   allow_http_reverse: boolean;
   allow_socks5: boolean;
+  tls_enabled: boolean;
+  tls_cert_file: string;
+  tls_key_file: string;
 };
 
 export type EndpointPatch = Partial<EndpointInput>;

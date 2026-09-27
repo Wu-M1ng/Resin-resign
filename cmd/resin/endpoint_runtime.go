@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -83,7 +85,7 @@ func (m *endpointRuntimeManager) ApplyEndpoint(endpoint model.Endpoint) error {
 		return net.ErrClosed
 	}
 
-	if current := m.runtimes[endpoint.ID]; current != nil && current.current().Port == endpoint.Port {
+	if current := m.runtimes[endpoint.ID]; current != nil && endpointBindingEqual(current.current(), endpoint) {
 		copy := endpoint
 		current.config.Store(&copy)
 		if current.started {
@@ -94,12 +96,30 @@ func (m *endpointRuntimeManager) ApplyEndpoint(endpoint model.Endpoint) error {
 		return nil
 	}
 
-	listener, err := net.Listen("tcp", formatListenAddress(m.listenAddress, endpoint.Port))
+	listenAddress := strings.TrimSpace(endpoint.ListenAddress)
+	if listenAddress == "" {
+		listenAddress = m.listenAddress
+	}
+	listener, err := net.Listen("tcp", formatListenAddress(listenAddress, endpoint.Port))
 	if err != nil {
 		if m.runtimes[endpoint.ID] == nil {
 			m.statuses[endpoint.ID] = service.EndpointRuntimeStatus{State: "error", LastError: err.Error()}
 		}
 		return err
+	}
+	if endpoint.TLSEnabled {
+		cert, certErr := tls.LoadX509KeyPair(endpoint.TLSCertFile, endpoint.TLSKeyFile)
+		if certErr != nil {
+			_ = listener.Close()
+			if m.runtimes[endpoint.ID] == nil {
+				m.statuses[endpoint.ID] = service.EndpointRuntimeStatus{State: "error", LastError: certErr.Error()}
+			}
+			return fmt.Errorf("load TLS certificate: %w", certErr)
+		}
+		listener = tls.NewListener(listener, &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			MinVersion:   tls.VersionTLS12,
+		})
 	}
 	listener = proxy.NewCountingListener(listener, m.metricsSink)
 
@@ -189,7 +209,11 @@ func (m *endpointRuntimeManager) startRuntimeLocked(runtime *managedEndpointRunt
 	runtime.started = true
 	endpoint := runtime.current()
 	m.statuses[endpoint.ID] = service.EndpointRuntimeStatus{State: "active"}
-	log.Printf("Endpoint %s starting on %s", endpoint.ID, formatListenAddress(m.listenAddress, endpoint.Port))
+	listenAddress := strings.TrimSpace(endpoint.ListenAddress)
+	if listenAddress == "" {
+		listenAddress = m.listenAddress
+	}
+	log.Printf("Endpoint %s starting on %s", endpoint.ID, formatListenAddress(listenAddress, endpoint.Port))
 	go func() {
 		err := runtime.server.Serve(runtime.listener)
 		if err == nil || errors.Is(err, http.ErrServerClosed) || errors.Is(err, net.ErrClosed) {
@@ -258,6 +282,14 @@ func stopManagedEndpoint(runtime *managedEndpointRuntime, timeout time.Duration)
 	defer cancel()
 	_ = runtime.server.Shutdown(ctx)
 	_ = runtime.listener.Close()
+}
+
+func endpointBindingEqual(current, next model.Endpoint) bool {
+	return current.Port == next.Port &&
+		strings.TrimSpace(current.ListenAddress) == strings.TrimSpace(next.ListenAddress) &&
+		current.TLSEnabled == next.TLSEnabled &&
+		current.TLSCertFile == next.TLSCertFile &&
+		current.TLSKeyFile == next.TLSKeyFile
 }
 
 type endpointSocksGate struct {

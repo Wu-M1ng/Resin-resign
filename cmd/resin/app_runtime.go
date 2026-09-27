@@ -458,7 +458,7 @@ func (a *resinApp) buildNetworkServers(engine *state.StateEngine) error {
 		a.metricsManager,
 	)
 	cpService.EndpointRuntime = endpointManager
-	defaultEndpoint := service.NewDefaultEndpoint(a.envCfg.ResinPort)
+	defaultEndpoint := service.NewDefaultEndpointWithAddress(a.envCfg.ResinPort, a.envCfg.ListenAddress)
 	if err := endpointManager.ApplyEndpoint(defaultEndpoint); err != nil {
 		return fmt.Errorf("default endpoint listen: %w", err)
 	}

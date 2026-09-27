@@ -1,0 +1,2 @@
+-- SQLite cannot drop columns on all supported versions. The relay columns are
+-- additive and are intentionally retained when rolling back application code.

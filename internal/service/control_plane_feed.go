@@ -28,6 +28,11 @@ type FeedResponse struct {
 	Name              string   `json:"name"`
 	PlatformID        string   `json:"platform_id"`
 	SubscriptionIDs   []string `json:"subscription_ids"`
+	RelayEnabled      bool     `json:"relay_enabled"`
+	RelayHost         string   `json:"relay_host"`
+	RelayPort         int      `json:"relay_port"`
+	RelayTLS          bool     `json:"relay_tls"`
+	RelayServerName   string   `json:"relay_server_name"`
 	DefaultFormat     string   `json:"default_format"`
 	EnabledFormats    []string `json:"enabled_formats"`
 	UnsupportedPolicy string   `json:"unsupported_policy"`
@@ -43,6 +48,11 @@ type CreateFeedRequest struct {
 	Name              string   `json:"name"`
 	PlatformID        string   `json:"platform_id"`
 	SubscriptionIDs   []string `json:"subscription_ids"`
+	RelayEnabled      bool     `json:"relay_enabled"`
+	RelayHost         string   `json:"relay_host"`
+	RelayPort         int      `json:"relay_port"`
+	RelayTLS          bool     `json:"relay_tls"`
+	RelayServerName   string   `json:"relay_server_name"`
 	DefaultFormat     string   `json:"default_format"`
 	EnabledFormats    []string `json:"enabled_formats"`
 	UnsupportedPolicy string   `json:"unsupported_policy"`
@@ -91,7 +101,7 @@ func encodeFeedStrings(values []string) string {
 	return string(b)
 }
 
-func validateFeedSettings(name, platformID string, subscriptionIDs []string, defaultFormat string, formats []string, policy string) *ServiceError {
+func validateFeedSettings(name, platformID string, subscriptionIDs []string, relayEnabled bool, relayHost string, relayPort int, relayTLS bool, relayServerName string, defaultFormat string, formats []string, policy string) *ServiceError {
 	if strings.TrimSpace(name) == "" {
 		return invalidArg("name is required")
 	}
@@ -99,6 +109,23 @@ func validateFeedSettings(name, platformID string, subscriptionIDs []string, def
 	hasSubscriptions := len(subscriptionIDs) > 0
 	if hasPlatform == hasSubscriptions {
 		return invalidArg("exactly one of platform_id or subscription_ids is required")
+	}
+	if relayEnabled {
+		if !hasPlatform {
+			return invalidArg("relay_enabled requires a platform source")
+		}
+		if strings.TrimSpace(relayHost) == "" {
+			return invalidArg("relay_host is required when relay_enabled is true")
+		}
+		if strings.Contains(relayHost, "://") || strings.ContainsAny(relayHost, "/?#\t\r\n ") {
+			return invalidArg("relay_host must be a hostname or IP address without a scheme")
+		}
+		if relayPort < 1 || relayPort > 65535 {
+			return invalidArg("relay_port must be between 1 and 65535")
+		}
+		if relayTLS && strings.TrimSpace(relayServerName) == "" {
+			return invalidArg("relay_server_name is required when relay_tls is true")
+		}
 	}
 	if len(formats) == 0 {
 		return invalidArg("enabled_formats must contain at least one format")
@@ -135,7 +162,7 @@ func feedToResponse(m model.SubscriptionFeed, publicToken string) (FeedResponse,
 	if err != nil {
 		return FeedResponse{}, err
 	}
-	return FeedResponse{ID: m.ID, Name: m.Name, PlatformID: m.PlatformID, SubscriptionIDs: subs, DefaultFormat: m.DefaultFormat, EnabledFormats: formats, UnsupportedPolicy: m.UnsupportedPolicy, Pretty: m.Pretty, Enabled: m.Enabled, TokenPrefix: m.TokenPrefix, PublicToken: publicToken, CreatedAt: time.Unix(0, m.CreatedAtNs).UTC().Format(time.RFC3339Nano), UpdatedAt: time.Unix(0, m.UpdatedAtNs).UTC().Format(time.RFC3339Nano)}, nil
+	return FeedResponse{ID: m.ID, Name: m.Name, PlatformID: m.PlatformID, SubscriptionIDs: subs, RelayEnabled: m.RelayEnabled, RelayHost: m.RelayHost, RelayPort: m.RelayPort, RelayTLS: m.RelayTLS, RelayServerName: m.RelayServerName, DefaultFormat: m.DefaultFormat, EnabledFormats: formats, UnsupportedPolicy: m.UnsupportedPolicy, Pretty: m.Pretty, Enabled: m.Enabled, TokenPrefix: m.TokenPrefix, PublicToken: publicToken, CreatedAt: time.Unix(0, m.CreatedAtNs).UTC().Format(time.RFC3339Nano), UpdatedAt: time.Unix(0, m.UpdatedAtNs).UTC().Format(time.RFC3339Nano)}, nil
 }
 
 func (s *ControlPlaneService) getFeedModel(id string) (*model.SubscriptionFeed, error) {
@@ -201,6 +228,11 @@ func (s *ControlPlaneService) GetFeed(id string) (*FeedResponse, error) {
 
 func (s *ControlPlaneService) CreateFeed(req CreateFeedRequest) (*FeedResponse, error) {
 	req.PlatformID = strings.TrimSpace(req.PlatformID)
+	req.RelayHost = strings.TrimSpace(req.RelayHost)
+	req.RelayServerName = strings.TrimSpace(req.RelayServerName)
+	if req.RelayTLS && req.RelayServerName == "" {
+		req.RelayServerName = req.RelayHost
+	}
 	for i := range req.EnabledFormats {
 		req.EnabledFormats[i] = strings.ToLower(strings.TrimSpace(req.EnabledFormats[i]))
 	}
@@ -211,7 +243,7 @@ func (s *ControlPlaneService) CreateFeed(req CreateFeedRequest) (*FeedResponse, 
 	if req.UnsupportedPolicy == "" {
 		req.UnsupportedPolicy = string(feed.UnsupportedSkip)
 	}
-	if verr := validateFeedSettings(req.Name, req.PlatformID, req.SubscriptionIDs, req.DefaultFormat, req.EnabledFormats, req.UnsupportedPolicy); verr != nil {
+	if verr := validateFeedSettings(req.Name, req.PlatformID, req.SubscriptionIDs, req.RelayEnabled, req.RelayHost, req.RelayPort, req.RelayTLS, req.RelayServerName, req.DefaultFormat, req.EnabledFormats, req.UnsupportedPolicy); verr != nil {
 		return nil, verr
 	}
 	if req.PlatformID != "" {
@@ -231,7 +263,7 @@ func (s *ControlPlaneService) CreateFeed(req CreateFeedRequest) (*FeedResponse, 
 		enabled = *req.Enabled
 	}
 	now := time.Now().UnixNano()
-	m := model.SubscriptionFeed{ID: uuid.New().String(), Name: strings.TrimSpace(req.Name), PlatformID: req.PlatformID, SubscriptionIDsJSON: encodeFeedStrings(req.SubscriptionIDs), DefaultFormat: req.DefaultFormat, EnabledFormatsJSON: encodeFeedStrings(req.EnabledFormats), UnsupportedPolicy: req.UnsupportedPolicy, Pretty: req.Pretty, Enabled: enabled, TokenHash: hash, TokenPrefix: prefix, CreatedAtNs: now, UpdatedAtNs: now}
+	m := model.SubscriptionFeed{ID: uuid.New().String(), Name: strings.TrimSpace(req.Name), PlatformID: req.PlatformID, SubscriptionIDsJSON: encodeFeedStrings(req.SubscriptionIDs), RelayEnabled: req.RelayEnabled, RelayHost: req.RelayHost, RelayPort: req.RelayPort, RelayTLS: req.RelayTLS, RelayServerName: req.RelayServerName, DefaultFormat: req.DefaultFormat, EnabledFormatsJSON: encodeFeedStrings(req.EnabledFormats), UnsupportedPolicy: req.UnsupportedPolicy, Pretty: req.Pretty, Enabled: enabled, TokenHash: hash, TokenPrefix: prefix, CreatedAtNs: now, UpdatedAtNs: now}
 	if err := s.Engine.InsertFeed(m); err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "unique") {
 			return nil, conflict("feed name already exists")
@@ -255,7 +287,7 @@ func (s *ControlPlaneService) UpdateFeed(id string, raw json.RawMessage) (*FeedR
 		return nil, invalidArg("invalid or empty feed patch")
 	}
 	var req CreateFeedRequest
-	req.Name, req.PlatformID, req.DefaultFormat, req.UnsupportedPolicy, req.Pretty, req.Enabled = m.Name, m.PlatformID, m.DefaultFormat, m.UnsupportedPolicy, m.Pretty, &m.Enabled
+	req.Name, req.PlatformID, req.RelayEnabled, req.RelayHost, req.RelayPort, req.RelayTLS, req.RelayServerName, req.DefaultFormat, req.UnsupportedPolicy, req.Pretty, req.Enabled = m.Name, m.PlatformID, m.RelayEnabled, m.RelayHost, m.RelayPort, m.RelayTLS, m.RelayServerName, m.DefaultFormat, m.UnsupportedPolicy, m.Pretty, &m.Enabled
 	req.EnabledFormats, _ = decodeFeedFormats(m.EnabledFormatsJSON)
 	req.SubscriptionIDs, _ = decodeFeedFormats(m.SubscriptionIDsJSON)
 	sourcePatched := false
@@ -277,6 +309,26 @@ func (s *ControlPlaneService) UpdateFeed(id string, raw json.RawMessage) (*FeedR
 			sourcePatched = true
 			if err := json.Unmarshal(value, &req.SubscriptionIDs); err != nil {
 				return nil, invalidArg("subscription_ids must be an array")
+			}
+		case "relay_enabled":
+			if err := json.Unmarshal(value, &req.RelayEnabled); err != nil {
+				return nil, invalidArg("relay_enabled must be a boolean")
+			}
+		case "relay_host":
+			if err := json.Unmarshal(value, &req.RelayHost); err != nil {
+				return nil, invalidArg("relay_host must be a string")
+			}
+		case "relay_port":
+			if err := json.Unmarshal(value, &req.RelayPort); err != nil {
+				return nil, invalidArg("relay_port must be an integer")
+			}
+		case "relay_tls":
+			if err := json.Unmarshal(value, &req.RelayTLS); err != nil {
+				return nil, invalidArg("relay_tls must be a boolean")
+			}
+		case "relay_server_name":
+			if err := json.Unmarshal(value, &req.RelayServerName); err != nil {
+				return nil, invalidArg("relay_server_name must be a string")
 			}
 		case "default_format":
 			if err := json.Unmarshal(value, &req.DefaultFormat); err != nil {
@@ -305,6 +357,11 @@ func (s *ControlPlaneService) UpdateFeed(id string, raw json.RawMessage) (*FeedR
 		}
 	}
 	req.PlatformID = strings.TrimSpace(req.PlatformID)
+	req.RelayHost = strings.TrimSpace(req.RelayHost)
+	req.RelayServerName = strings.TrimSpace(req.RelayServerName)
+	if req.RelayTLS && req.RelayServerName == "" {
+		req.RelayServerName = req.RelayHost
+	}
 	for i := range req.EnabledFormats {
 		req.EnabledFormats[i] = strings.ToLower(strings.TrimSpace(req.EnabledFormats[i]))
 	}
@@ -315,7 +372,7 @@ func (s *ControlPlaneService) UpdateFeed(id string, raw json.RawMessage) (*FeedR
 	if req.UnsupportedPolicy == "" {
 		req.UnsupportedPolicy = string(feed.UnsupportedSkip)
 	}
-	if verr := validateFeedSettings(req.Name, req.PlatformID, req.SubscriptionIDs, req.DefaultFormat, req.EnabledFormats, req.UnsupportedPolicy); verr != nil {
+	if verr := validateFeedSettings(req.Name, req.PlatformID, req.SubscriptionIDs, req.RelayEnabled, req.RelayHost, req.RelayPort, req.RelayTLS, req.RelayServerName, req.DefaultFormat, req.EnabledFormats, req.UnsupportedPolicy); verr != nil {
 		// Feeds created before source modes were exclusive may contain both
 		// fields. Keep those records editable when the patch does not touch the
 		// source selection; any new source selection must satisfy the XOR rule.
@@ -332,7 +389,7 @@ func (s *ControlPlaneService) UpdateFeed(id string, raw json.RawMessage) (*FeedR
 	if verr := s.validateFeedSubscriptions(req.SubscriptionIDs); verr != nil {
 		return nil, verr
 	}
-	m.Name, m.PlatformID, m.SubscriptionIDsJSON, m.DefaultFormat, m.EnabledFormatsJSON, m.UnsupportedPolicy, m.Pretty, m.Enabled, m.UpdatedAtNs = strings.TrimSpace(req.Name), req.PlatformID, encodeFeedStrings(req.SubscriptionIDs), req.DefaultFormat, encodeFeedStrings(req.EnabledFormats), req.UnsupportedPolicy, req.Pretty, *req.Enabled, nextFeedUpdatedAt(m.UpdatedAtNs)
+	m.Name, m.PlatformID, m.SubscriptionIDsJSON, m.RelayEnabled, m.RelayHost, m.RelayPort, m.RelayTLS, m.RelayServerName, m.DefaultFormat, m.EnabledFormatsJSON, m.UnsupportedPolicy, m.Pretty, m.Enabled, m.UpdatedAtNs = strings.TrimSpace(req.Name), req.PlatformID, encodeFeedStrings(req.SubscriptionIDs), req.RelayEnabled, req.RelayHost, req.RelayPort, req.RelayTLS, req.RelayServerName, req.DefaultFormat, encodeFeedStrings(req.EnabledFormats), req.UnsupportedPolicy, req.Pretty, *req.Enabled, nextFeedUpdatedAt(m.UpdatedAtNs)
 	if err := s.Engine.UpdateFeed(*m); err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "unique") {
 			return nil, conflict("feed name already exists")
@@ -459,7 +516,53 @@ func (s *ControlPlaneService) buildFeedNodes(m model.SubscriptionFeed) ([]feed.E
 		}
 		return items[i].Tag < items[j].Tag
 	})
+	if m.RelayEnabled {
+		return s.buildRelayFeedNodes(m, plat.Name, len(items) > 0)
+	}
 	return items, nil
+}
+
+// buildRelayFeedNodes replaces the selected platform's internal nodes with a
+// single public SOCKS5 endpoint. Resin receives the client connection and
+// routes it through the selected platform, so internal names such as
+// "warp" never need to be resolvable by the client device.
+func (s *ControlPlaneService) buildRelayFeedNodes(m model.SubscriptionFeed, platformName string, hasNodes bool) ([]feed.ExportNode, error) {
+	if !hasNodes {
+		return []feed.ExportNode{}, nil
+	}
+	password := ""
+	if s.EnvCfg != nil {
+		password = s.EnvCfg.ProxyToken
+	}
+	object := map[string]any{
+		"type":        "socks",
+		"tag":         strings.TrimSpace(m.Name) + " / Resin",
+		"server":      strings.TrimSpace(m.RelayHost),
+		"server_port": m.RelayPort,
+		"version":     "5",
+		"username":    platformName,
+	}
+	if password != "" {
+		object["password"] = password
+	}
+	if m.RelayTLS {
+		serverName := strings.TrimSpace(m.RelayServerName)
+		if serverName == "" {
+			serverName = strings.TrimSpace(m.RelayHost)
+		}
+		object["tls"] = map[string]any{
+			"enabled":     true,
+			"server_name": serverName,
+		}
+	}
+	raw, err := json.Marshal(object)
+	if err != nil {
+		return nil, internal("marshal relay feed node", err)
+	}
+	return []feed.ExportNode{{
+		Tag:        strings.TrimSpace(m.Name) + " / Resin",
+		RawOptions: raw,
+	}}, nil
 }
 
 // buildSubscriptionFeedNodes exports nodes directly from the selected source

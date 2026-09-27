@@ -8,6 +8,11 @@ type SubscriptionFeed struct {
 	Name                string `json:"name"`
 	PlatformID          string `json:"platform_id"`
 	SubscriptionIDsJSON string `json:"subscription_ids_json"`
+	RelayEnabled        bool   `json:"relay_enabled"`
+	RelayHost           string `json:"relay_host"`
+	RelayPort           int    `json:"relay_port"`
+	RelayTLS            bool   `json:"relay_tls"`
+	RelayServerName     string `json:"relay_server_name"`
 	DefaultFormat       string `json:"default_format"`
 	EnabledFormatsJSON  string `json:"enabled_formats_json"`
 	UnsupportedPolicy   string `json:"unsupported_policy"`

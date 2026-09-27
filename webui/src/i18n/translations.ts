@@ -53,6 +53,17 @@ const EXACT_ZH_TO_EN: Record<string, string> = {
   "选择一个或多个已启用的原始订阅": "Choose one or more enabled source subscriptions",
   "请选择一个节点来源": "Choose a node source",
   "未选择来源": "No source selected",
+  "Resin 中转": "Resin relay",
+  "通过 Resin 中转": "Relay through Resin",
+  "Resin 公网域名": "Resin public hostname",
+  "Resin SOCKS5 端口": "Resin SOCKS5 port",
+  "TLS SNI": "TLS SNI",
+  "通常填写证书对应的域名": "Usually use the hostname covered by the certificate",
+  "TLS SOCKS5 中转请使用 sing-box 或 Clash Meta；URI/V2Ray Base64 无法表达 TLS，会跳过该节点。":
+    "Use sing-box or Clash Meta for TLS SOCKS5 relay; URI/V2Ray Base64 cannot represent TLS and will skip the node.",
+  "客户端连接公网入口，Resin 再转发到该平台内的节点；请确保此端口启用了 SOCKS5。":
+    "Clients connect to the public endpoint and Resin forwards to this platform; make sure SOCKS5 is enabled on this port.",
+  "请填写有效的 Resin 中转域名和端口": "Enter a valid Resin relay hostname and port",
   "订阅输出名称不能为空": "Subscription feed name cannot be empty",
   "至少启用一种输出格式": "Enable at least one output format",
   "订阅输出 {{name}} 创建成功": "Subscription feed {{name}} created",
@@ -87,6 +98,18 @@ const EXACT_ZH_TO_EN: Record<string, string> = {
   "删除接入点": "Delete Endpoint",
   "删除接入点 :{{port}}": "Delete endpoint :{{port}}",
   "监听端口": "Listening Port",
+  "监听地址": "Listen Address",
+  "公网 SOCKS5 入口通常填写 0.0.0.0；仅本机访问可填写 127.0.0.1。":
+    "Use 0.0.0.0 for a public SOCKS5 entry point, or 127.0.0.1 for local-only access.",
+  "监听地址不能为空": "Listen address is required",
+  "TLS 加密": "TLS Encryption",
+  "启用原生 TLS": "Enable native TLS",
+  "证书文件": "Certificate file",
+  "私钥文件": "Private key file",
+  "启用 TLS 时必须填写证书和私钥路径":
+    "Certificate and private key paths are required when TLS is enabled",
+  "证书和私钥路径必须是 Resin 容器内可读取的路径。":
+    "Certificate and private key paths must be readable inside the Resin container.",
   "启用接入点 :{{port}}": "Enable endpoint :{{port}}",
   "禁用接入点 :{{port}}": "Disable endpoint :{{port}}",
   "接入点 :{{port}} 已启用": "Endpoint :{{port}} enabled",

@@ -7,6 +7,7 @@ function normalizeEndpoint(raw: Endpoint): Endpoint {
   return {
     id: raw.id || "",
     port: Number(raw.port) || 0,
+    listen_address: typeof raw.listen_address === "string" ? raw.listen_address : "",
     enabled: Boolean(raw.enabled),
     allow_management: Boolean(raw.allow_management),
     allow_proxy: Boolean(raw.allow_proxy),
@@ -14,6 +15,9 @@ function normalizeEndpoint(raw: Endpoint): Endpoint {
     allow_http_forward: Boolean(raw.allow_http_forward),
     allow_http_reverse: Boolean(raw.allow_http_reverse),
     allow_socks5: Boolean(raw.allow_socks5),
+    tls_enabled: Boolean(raw.tls_enabled),
+    tls_cert_file: typeof raw.tls_cert_file === "string" ? raw.tls_cert_file : "",
+    tls_key_file: typeof raw.tls_key_file === "string" ? raw.tls_key_file : "",
     source: raw.source || "database",
     read_only: Boolean(raw.read_only),
     status: raw.status || "inactive",

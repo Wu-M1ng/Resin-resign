@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -30,6 +32,7 @@ type EndpointRuntime interface {
 type EndpointResponse struct {
 	ID                   string `json:"id"`
 	Port                 int    `json:"port"`
+	ListenAddress        string `json:"listen_address"`
 	Enabled              bool   `json:"enabled"`
 	AllowManagement      bool   `json:"allow_management"`
 	AllowProxy           bool   `json:"allow_proxy"`
@@ -37,6 +40,9 @@ type EndpointResponse struct {
 	AllowHTTPForward     bool   `json:"allow_http_forward"`
 	AllowHTTPReverse     bool   `json:"allow_http_reverse"`
 	AllowSOCKS5          bool   `json:"allow_socks5"`
+	TLSEnabled           bool   `json:"tls_enabled"`
+	TLSCertFile          string `json:"tls_cert_file,omitempty"`
+	TLSKeyFile           string `json:"tls_key_file,omitempty"`
 	Source               string `json:"source"`
 	ReadOnly             bool   `json:"read_only"`
 	Status               string `json:"status"`
@@ -46,14 +52,18 @@ type EndpointResponse struct {
 }
 
 type CreateEndpointRequest struct {
-	Port                 int   `json:"port"`
-	Enabled              *bool `json:"enabled,omitempty"`
-	AllowManagement      *bool `json:"allow_management,omitempty"`
-	AllowProxy           *bool `json:"allow_proxy,omitempty"`
-	RequireProxyAuthInfo *bool `json:"require_proxy_auth_info,omitempty"`
-	AllowHTTPForward     *bool `json:"allow_http_forward,omitempty"`
-	AllowHTTPReverse     *bool `json:"allow_http_reverse,omitempty"`
-	AllowSOCKS5          *bool `json:"allow_socks5,omitempty"`
+	Port                 int    `json:"port"`
+	ListenAddress        string `json:"listen_address,omitempty"`
+	Enabled              *bool  `json:"enabled,omitempty"`
+	AllowManagement      *bool  `json:"allow_management,omitempty"`
+	AllowProxy           *bool  `json:"allow_proxy,omitempty"`
+	RequireProxyAuthInfo *bool  `json:"require_proxy_auth_info,omitempty"`
+	AllowHTTPForward     *bool  `json:"allow_http_forward,omitempty"`
+	AllowHTTPReverse     *bool  `json:"allow_http_reverse,omitempty"`
+	AllowSOCKS5          *bool  `json:"allow_socks5,omitempty"`
+	TLSEnabled           *bool  `json:"tls_enabled,omitempty"`
+	TLSCertFile          string `json:"tls_cert_file,omitempty"`
+	TLSKeyFile           string `json:"tls_key_file,omitempty"`
 }
 
 var endpointPatchAllowedFields = map[string]bool{
@@ -65,6 +75,10 @@ var endpointPatchAllowedFields = map[string]bool{
 	"allow_http_forward":      true,
 	"allow_http_reverse":      true,
 	"allow_socks5":            true,
+	"listen_address":          true,
+	"tls_enabled":             true,
+	"tls_cert_file":           true,
+	"tls_key_file":            true,
 }
 
 func boolOrDefault(value *bool, fallback bool) bool {
@@ -91,15 +105,29 @@ func NewDefaultEndpoint(port int) model.Endpoint {
 	}
 }
 
+// NewDefaultEndpointWithAddress builds the read-only default endpoint with an
+// explicit bind address. The legacy constructor keeps an empty address so
+// runtime callers can continue to use their process-wide fallback.
+func NewDefaultEndpointWithAddress(port int, listenAddress string) model.Endpoint {
+	endpoint := NewDefaultEndpoint(port)
+	endpoint.ListenAddress = strings.TrimSpace(listenAddress)
+	return endpoint
+}
+
 func (s *ControlPlaneService) defaultEndpoint() model.Endpoint {
 	port := 0
 	if s != nil && s.EnvCfg != nil {
 		port = s.EnvCfg.ResinPort
 	}
-	return NewDefaultEndpoint(port)
+	listenAddress := "127.0.0.1"
+	if s != nil && s.EnvCfg != nil && strings.TrimSpace(s.EnvCfg.ListenAddress) != "" {
+		listenAddress = strings.TrimSpace(s.EnvCfg.ListenAddress)
+	}
+	return NewDefaultEndpointWithAddress(port, listenAddress)
 }
 
 func (s *ControlPlaneService) endpointResponse(endpoint model.Endpoint, source string, readOnly bool) EndpointResponse {
+	endpoint = s.effectiveEndpoint(endpoint)
 	status := EndpointRuntimeStatus{State: "inactive"}
 	if s != nil && s.EndpointRuntime != nil {
 		status = s.EndpointRuntime.EndpointStatus(endpoint.ID)
@@ -110,6 +138,7 @@ func (s *ControlPlaneService) endpointResponse(endpoint model.Endpoint, source s
 	response := EndpointResponse{
 		ID:                   endpoint.ID,
 		Port:                 endpoint.Port,
+		ListenAddress:        endpoint.ListenAddress,
 		Enabled:              endpoint.Enabled,
 		AllowManagement:      endpoint.AllowManagement,
 		AllowProxy:           endpoint.AllowProxy,
@@ -117,6 +146,9 @@ func (s *ControlPlaneService) endpointResponse(endpoint model.Endpoint, source s
 		AllowHTTPForward:     endpoint.AllowHTTPForward,
 		AllowHTTPReverse:     endpoint.AllowHTTPReverse,
 		AllowSOCKS5:          endpoint.AllowSOCKS5,
+		TLSEnabled:           endpoint.TLSEnabled,
+		TLSCertFile:          endpoint.TLSCertFile,
+		TLSKeyFile:           endpoint.TLSKeyFile,
 		Source:               source,
 		ReadOnly:             readOnly,
 		Status:               status.State,
@@ -131,7 +163,25 @@ func (s *ControlPlaneService) endpointResponse(endpoint model.Endpoint, source s
 	return response
 }
 
+func (s *ControlPlaneService) effectiveEndpoint(endpoint model.Endpoint) model.Endpoint {
+	if strings.TrimSpace(endpoint.ListenAddress) == "" {
+		endpoint.ListenAddress = s.defaultEndpoint().ListenAddress
+	}
+	return endpoint
+}
+
 func (s *ControlPlaneService) validateEndpoint(endpoint model.Endpoint) *ServiceError {
+	if strings.TrimSpace(endpoint.ListenAddress) == "" {
+		return invalidArg("listen_address must not be empty")
+	}
+	if endpoint.ListenAddress != "localhost" && net.ParseIP(endpoint.ListenAddress) == nil {
+		return invalidArg("listen_address must be an IP address or localhost")
+	}
+	if endpoint.TLSEnabled {
+		if strings.TrimSpace(endpoint.TLSCertFile) == "" || strings.TrimSpace(endpoint.TLSKeyFile) == "" {
+			return invalidArg("tls_cert_file and tls_key_file are required when tls_enabled is true")
+		}
+	}
 	if endpoint.Port < 1 || endpoint.Port > 65535 {
 		return invalidArg("port: must be between 1 and 65535")
 	}
@@ -205,10 +255,15 @@ func (s *ControlPlaneService) CreateEndpoint(req CreateEndpointRequest) (*Endpoi
 	defer s.endpointMu.Unlock()
 
 	allowProxy := boolOrDefault(req.AllowProxy, true)
+	listenAddress := strings.TrimSpace(req.ListenAddress)
+	if listenAddress == "" {
+		listenAddress = s.defaultEndpoint().ListenAddress
+	}
 	now := time.Now().UnixNano()
 	endpoint := model.Endpoint{
 		ID:                   uuid.New().String(),
 		Port:                 req.Port,
+		ListenAddress:        listenAddress,
 		Enabled:              boolOrDefault(req.Enabled, true),
 		AllowManagement:      boolOrDefault(req.AllowManagement, false),
 		AllowProxy:           allowProxy,
@@ -216,6 +271,9 @@ func (s *ControlPlaneService) CreateEndpoint(req CreateEndpointRequest) (*Endpoi
 		AllowHTTPForward:     boolOrDefault(req.AllowHTTPForward, allowProxy),
 		AllowHTTPReverse:     boolOrDefault(req.AllowHTTPReverse, allowProxy),
 		AllowSOCKS5:          boolOrDefault(req.AllowSOCKS5, allowProxy),
+		TLSEnabled:           boolOrDefault(req.TLSEnabled, false),
+		TLSCertFile:          strings.TrimSpace(req.TLSCertFile),
+		TLSKeyFile:           strings.TrimSpace(req.TLSKeyFile),
 		CreatedAtNs:          now,
 		UpdatedAtNs:          now,
 	}
@@ -267,11 +325,17 @@ func (s *ControlPlaneService) UpdateEndpoint(id string, patchJSON json.RawMessag
 	if err != nil {
 		return nil, internal("get endpoint", err)
 	}
-	next := *current
+	currentModel := s.effectiveEndpoint(*current)
+	next := currentModel
 	if value, ok, parseErr := patch.optionalInt("port"); parseErr != nil {
 		return nil, parseErr
 	} else if ok {
 		next.Port = value
+	}
+	if value, ok, parseErr := patch.optionalString("listen_address"); parseErr != nil {
+		return nil, parseErr
+	} else if ok {
+		next.ListenAddress = strings.TrimSpace(value)
 	}
 	boolFields := []struct {
 		name string
@@ -294,11 +358,26 @@ func (s *ControlPlaneService) UpdateEndpoint(id string, patchJSON json.RawMessag
 			field.set(value)
 		}
 	}
+	if value, ok, parseErr := patch.optionalBool("tls_enabled"); parseErr != nil {
+		return nil, parseErr
+	} else if ok {
+		next.TLSEnabled = value
+	}
+	if value, ok, parseErr := patch.optionalString("tls_cert_file"); parseErr != nil {
+		return nil, parseErr
+	} else if ok {
+		next.TLSCertFile = strings.TrimSpace(value)
+	}
+	if value, ok, parseErr := patch.optionalString("tls_key_file"); parseErr != nil {
+		return nil, parseErr
+	} else if ok {
+		next.TLSKeyFile = strings.TrimSpace(value)
+	}
 	if validationErr := s.validateEndpoint(next); validationErr != nil {
 		return nil, validationErr
 	}
-	if next == *current {
-		response := s.endpointResponse(*current, "database", false)
+	if next == currentModel {
+		response := s.endpointResponse(currentModel, "database", false)
 		return &response, nil
 	}
 	next.UpdatedAtNs = time.Now().UnixNano()
@@ -313,10 +392,10 @@ func (s *ControlPlaneService) UpdateEndpoint(id string, patchJSON json.RawMessag
 	}
 	if next.Enabled && s.EndpointRuntime != nil {
 		if applyErr := s.EndpointRuntime.ApplyEndpoint(next); applyErr != nil {
-			if !current.Enabled {
+			if !currentModel.Enabled {
 				s.EndpointRuntime.RemoveEndpoint(next.ID)
 			}
-			if rollbackErr := s.Engine.UpdateEndpoint(*current); rollbackErr != nil {
+			if rollbackErr := s.Engine.UpdateEndpoint(currentModel); rollbackErr != nil {
 				return nil, internal("rollback endpoint after listener failure", errors.Join(applyErr, rollbackErr))
 			}
 			return nil, conflict(fmt.Sprintf("listen on port %d: %v", next.Port, applyErr))

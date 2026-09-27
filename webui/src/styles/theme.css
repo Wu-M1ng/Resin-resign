@@ -2519,6 +2519,12 @@ a {
   padding: 18px;
 }
 
+.feeds-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
 .feeds-toolbar-actions,
 .feeds-row-actions,
 .feeds-format-list,
@@ -2534,7 +2540,7 @@ a {
 }
 
 .feeds-table-wrap {
-  margin-top: 12px;
+  margin-top: 18px;
   overflow-x: auto;
 }
 
@@ -2544,7 +2550,16 @@ a {
 
 .feeds-table td,
 .feeds-table th {
+  padding: 13px 14px;
   vertical-align: middle;
+}
+
+.feeds-table tbody tr {
+  height: 62px;
+}
+
+.feeds-table td:nth-child(2) .badge {
+  margin-right: 8px;
 }
 
 .feeds-format-list {
@@ -2563,8 +2578,7 @@ a {
 }
 
 .feeds-token-card {
-  margin-top: 14px;
-  padding: 18px;
+  padding: 20px;
 }
 
 .feeds-token-card .callout {
@@ -2607,12 +2621,24 @@ a {
 
 .feeds-modal-card {
   width: min(720px, 100%);
+  padding: 24px;
+}
+
+.feeds-modal-card .modal-header {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.feeds-modal-card .form-grid {
+  margin-top: 20px;
+  gap: 16px;
 }
 
 .feeds-format-checks {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px 12px;
+  margin-top: 2px;
 }
 
 .feeds-format-check,
@@ -2638,7 +2664,8 @@ a {
 .feeds-source-modes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px 12px;
+  margin-top: 2px;
 }
 
 .feeds-source-mode {
@@ -2652,7 +2679,11 @@ a {
 .feeds-switch-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
+}
+
+.feeds-modal-card .muted {
+  line-height: 1.55;
 }
 
 .feeds-preview-card {
@@ -2673,6 +2704,21 @@ a {
 }
 
 @media (max-width: 760px) {
+  .feeds-page {
+    gap: 14px;
+  }
+
+  .feeds-list-card,
+  .feeds-token-card,
+  .feeds-modal-card {
+    padding: 16px;
+  }
+
+  .feeds-modal-card .form-grid {
+    margin-top: 16px;
+    gap: 14px;
+  }
+
   .feeds-url-row,
   .feeds-switch-grid {
     grid-template-columns: 1fr;
@@ -3242,6 +3288,12 @@ a {
 
 .endpoint-tile-heading {
   min-width: 0;
+}
+
+.endpoint-listen-address {
+  color: var(--text-muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .endpoint-status-dot {

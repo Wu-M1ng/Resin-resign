@@ -165,6 +165,39 @@ func TestControlPlaneEndpoints_RequireAuthInfoCanBeConfiguredWithProxyToken(t *t
 	}
 }
 
+func TestControlPlaneEndpointsTLSConfigRoundTrip(t *testing.T) {
+	cp, runtime := newEndpointTestService(t, &config.EnvConfig{
+		ResinPort:   2260,
+		AuthVersion: config.AuthVersionV1,
+	})
+	created, err := cp.CreateEndpoint(CreateEndpointRequest{
+		Port:          32035,
+		ListenAddress: "0.0.0.0",
+		TLSEnabled:    boolPointer(true),
+		TLSCertFile:   "/etc/resin/tls/fullchain.pem",
+		TLSKeyFile:    "/etc/resin/tls/privkey.pem",
+	})
+	if err != nil {
+		t.Fatalf("CreateEndpoint with TLS: %v", err)
+	}
+	if !created.TLSEnabled || created.ListenAddress != "0.0.0.0" || created.TLSCertFile == "" || created.TLSKeyFile == "" {
+		t.Fatalf("created TLS endpoint = %+v", created)
+	}
+	if runtime.endpoints[created.ID].TLSCertFile != "/etc/resin/tls/fullchain.pem" {
+		t.Fatalf("runtime TLS config = %+v", runtime.endpoints[created.ID])
+	}
+	persisted, err := cp.Engine.GetEndpoint(created.ID)
+	if err != nil {
+		t.Fatalf("GetEndpoint: %v", err)
+	}
+	if !persisted.TLSEnabled || persisted.ListenAddress != "0.0.0.0" {
+		t.Fatalf("persisted TLS endpoint = %+v", persisted)
+	}
+	if _, err := cp.CreateEndpoint(CreateEndpointRequest{Port: 32036, TLSEnabled: boolPointer(true)}); err == nil {
+		t.Fatal("TLS endpoint without certificate paths was accepted")
+	}
+}
+
 func TestControlPlaneEndpoints_ManagementOnlyDefaultsProxyProtocolsOff(t *testing.T) {
 	cp, _ := newEndpointTestService(t, &config.EnvConfig{
 		ResinPort:   2260,

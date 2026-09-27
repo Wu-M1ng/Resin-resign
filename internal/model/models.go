@@ -39,6 +39,7 @@ type Subscription struct {
 type Endpoint struct {
 	ID                   string `json:"id"`
 	Port                 int    `json:"port"`
+	ListenAddress        string `json:"listen_address"`
 	Enabled              bool   `json:"enabled"`
 	AllowManagement      bool   `json:"allow_management"`
 	AllowProxy           bool   `json:"allow_proxy"`
@@ -46,6 +47,9 @@ type Endpoint struct {
 	AllowHTTPForward     bool   `json:"allow_http_forward"`
 	AllowHTTPReverse     bool   `json:"allow_http_reverse"`
 	AllowSOCKS5          bool   `json:"allow_socks5"`
+	TLSEnabled           bool   `json:"tls_enabled"`
+	TLSCertFile          string `json:"tls_cert_file"`
+	TLSKeyFile           string `json:"tls_key_file"`
 	CreatedAtNs          int64  `json:"created_at_ns"`
 	UpdatedAtNs          int64  `json:"updated_at_ns"`
 }

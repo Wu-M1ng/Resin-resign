@@ -374,12 +374,12 @@ func (r *StateRepo) InsertEndpoint(endpoint model.Endpoint) error {
 
 	_, err := r.db.Exec(`
 		INSERT INTO endpoints (
-			id, port, enabled, allow_management, allow_proxy, require_proxy_auth_info,
-			allow_http_forward, allow_http_reverse, allow_socks5, created_at_ns, updated_at_ns
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, endpoint.ID, endpoint.Port, endpoint.Enabled, endpoint.AllowManagement, endpoint.AllowProxy,
+			id, port, listen_address, enabled, allow_management, allow_proxy, require_proxy_auth_info,
+			allow_http_forward, allow_http_reverse, allow_socks5, tls_enabled, tls_cert_file, tls_key_file, created_at_ns, updated_at_ns
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, endpoint.ID, endpoint.Port, endpoint.ListenAddress, endpoint.Enabled, endpoint.AllowManagement, endpoint.AllowProxy,
 		endpoint.RequireProxyAuthInfo, endpoint.AllowHTTPForward, endpoint.AllowHTTPReverse,
-		endpoint.AllowSOCKS5, endpoint.CreatedAtNs, endpoint.UpdatedAtNs)
+		endpoint.AllowSOCKS5, endpoint.TLSEnabled, endpoint.TLSCertFile, endpoint.TLSKeyFile, endpoint.CreatedAtNs, endpoint.UpdatedAtNs)
 	if isSQLiteUniqueConstraint(err) {
 		return fmt.Errorf("%w: endpoint id or port already exists", ErrConflict)
 	}
@@ -394,6 +394,7 @@ func (r *StateRepo) UpdateEndpoint(endpoint model.Endpoint) error {
 	result, err := r.db.Exec(`
 		UPDATE endpoints SET
 			port = ?,
+			listen_address = ?,
 			enabled = ?,
 			allow_management = ?,
 			allow_proxy = ?,
@@ -401,11 +402,14 @@ func (r *StateRepo) UpdateEndpoint(endpoint model.Endpoint) error {
 			allow_http_forward = ?,
 			allow_http_reverse = ?,
 			allow_socks5 = ?,
+			tls_enabled = ?,
+			tls_cert_file = ?,
+			tls_key_file = ?,
 			updated_at_ns = ?
 		WHERE id = ?
-	`, endpoint.Port, endpoint.Enabled, endpoint.AllowManagement, endpoint.AllowProxy,
+	`, endpoint.Port, endpoint.ListenAddress, endpoint.Enabled, endpoint.AllowManagement, endpoint.AllowProxy,
 		endpoint.RequireProxyAuthInfo, endpoint.AllowHTTPForward, endpoint.AllowHTTPReverse,
-		endpoint.AllowSOCKS5, endpoint.UpdatedAtNs, endpoint.ID)
+		endpoint.AllowSOCKS5, endpoint.TLSEnabled, endpoint.TLSCertFile, endpoint.TLSKeyFile, endpoint.UpdatedAtNs, endpoint.ID)
 	if isSQLiteUniqueConstraint(err) {
 		return fmt.Errorf("%w: endpoint port already exists", ErrConflict)
 	}
@@ -438,8 +442,8 @@ func (r *StateRepo) DeleteEndpoint(id string) error {
 // GetEndpoint returns one persisted custom endpoint.
 func (r *StateRepo) GetEndpoint(id string) (*model.Endpoint, error) {
 	row := r.db.QueryRow(`
-		SELECT id, port, enabled, allow_management, allow_proxy, require_proxy_auth_info,
-		       allow_http_forward, allow_http_reverse, allow_socks5, created_at_ns, updated_at_ns
+		SELECT id, port, listen_address, enabled, allow_management, allow_proxy, require_proxy_auth_info,
+		       allow_http_forward, allow_http_reverse, allow_socks5, tls_enabled, tls_cert_file, tls_key_file, created_at_ns, updated_at_ns
 		FROM endpoints WHERE id = ?
 	`, id)
 	endpoint, err := scanEndpoint(row.Scan)
@@ -455,8 +459,8 @@ func (r *StateRepo) GetEndpoint(id string) (*model.Endpoint, error) {
 // ListEndpoints returns all persisted custom endpoints ordered by port.
 func (r *StateRepo) ListEndpoints() ([]model.Endpoint, error) {
 	rows, err := r.db.Query(`
-		SELECT id, port, enabled, allow_management, allow_proxy, require_proxy_auth_info,
-		       allow_http_forward, allow_http_reverse, allow_socks5, created_at_ns, updated_at_ns
+		SELECT id, port, listen_address, enabled, allow_management, allow_proxy, require_proxy_auth_info,
+		       allow_http_forward, allow_http_reverse, allow_socks5, tls_enabled, tls_cert_file, tls_key_file, created_at_ns, updated_at_ns
 		FROM endpoints ORDER BY port ASC
 	`)
 	if err != nil {
@@ -480,10 +484,11 @@ type endpointScanner func(dest ...any) error
 func scanEndpoint(scan endpointScanner) (model.Endpoint, error) {
 	var endpoint model.Endpoint
 	var enabled, allowManagement, allowProxy, requireProxyAuthInfo int
-	var allowHTTPForward, allowHTTPReverse, allowSOCKS5 int
+	var allowHTTPForward, allowHTTPReverse, allowSOCKS5, tlsEnabled int
 	err := scan(
 		&endpoint.ID,
 		&endpoint.Port,
+		&endpoint.ListenAddress,
 		&enabled,
 		&allowManagement,
 		&allowProxy,
@@ -491,6 +496,9 @@ func scanEndpoint(scan endpointScanner) (model.Endpoint, error) {
 		&allowHTTPForward,
 		&allowHTTPReverse,
 		&allowSOCKS5,
+		&tlsEnabled,
+		&endpoint.TLSCertFile,
+		&endpoint.TLSKeyFile,
 		&endpoint.CreatedAtNs,
 		&endpoint.UpdatedAtNs,
 	)
@@ -504,6 +512,7 @@ func scanEndpoint(scan endpointScanner) (model.Endpoint, error) {
 	endpoint.AllowHTTPForward = allowHTTPForward != 0
 	endpoint.AllowHTTPReverse = allowHTTPReverse != 0
 	endpoint.AllowSOCKS5 = allowSOCKS5 != 0
+	endpoint.TLSEnabled = tlsEnabled != 0
 	return endpoint, nil
 }
 

@@ -75,6 +75,7 @@ func toClashProxy(raw map[string]any, name string) (map[string]any, error) {
 		proxy["type"] = "socks5"
 		copyString(raw, proxy, "username", "username")
 		copyString(raw, proxy, "password", "password")
+		applyClashTLS(raw, proxy)
 	case "shadowsocks":
 		method, methodOK := requiredString(raw, "method")
 		password, passwordOK := requiredString(raw, "password")

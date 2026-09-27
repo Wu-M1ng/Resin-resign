@@ -55,6 +55,17 @@ func TestHTTPAndSOCKSURIUseStandardUserinfo(t *testing.T) {
 	}
 }
 
+func TestURISkipsTLSOCKSBecauseURIHasNoTLSParameter(t *testing.T) {
+	item := testNode("socks-tls-uri", "resin-relay", `{"type":"socks","server":"resin.example.com","server_port":2261,"username":"Warp","password":"secret","tls":{"enabled":true,"server_name":"resin.example.com"}}`)
+	result, err := Export(FormatURI, []ExportNode{item}, ExportOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.NodeCount != 0 || result.SkippedCount != 1 || len(result.SkippedTypes) != 1 || result.SkippedTypes[0] != "socks" {
+		t.Fatalf("TLS SOCKS should be skipped from URI output: %+v", result)
+	}
+}
+
 func TestVLESSURIMapsRealityFields(t *testing.T) {
 	item := testNode("reality", "reality-node", `{"type":"vless","server":"example.com","server_port":443,"uuid":"00000000-0000-0000-0000-000000000001","tls":{"enabled":true,"server_name":"sni.example","reality":{"enabled":true,"public_key":"public","short_id":"abcd"},"utls":{"enabled":true,"fingerprint":"chrome"}}}`)
 	result, err := Export(FormatURI, []ExportNode{item}, ExportOptions{})

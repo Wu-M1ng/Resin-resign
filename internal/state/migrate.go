@@ -30,7 +30,10 @@ const (
 	stateVersionPlatformRegexFilterRules         = 9
 	stateVersionAddSubscriptionFeeds             = 10
 	stateVersionAddFeedSubscriptions             = 11
-	stateLatestVersion                           = stateVersionAddFeedSubscriptions
+	stateVersionAddFeedRelay                     = 12
+	stateVersionAddEndpointTLS                   = 13
+	stateVersionAddFeedRelayTLS                  = 14
+	stateLatestVersion                           = stateVersionAddFeedRelayTLS
 	stateLegacyBaselineVersion                   = stateVersionAddFixedAccountHeader
 
 	stateBaseSchemaMigration = stateMigrationsPath + "/000001_state_base.up.sql"

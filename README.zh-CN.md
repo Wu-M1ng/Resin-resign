@@ -78,7 +78,7 @@
 # docker-compose.yml
 services:
   resin:
-    image: ghcr.io/resinat/resin:latest
+    image: ghcr.io/wu-m1ng/resin-resign:latest
     container_name: resin
     restart: unless-stopped
     environment:
@@ -87,15 +87,15 @@ services:
       RESIN_LISTEN_ADDRESS: 0.0.0.0
       RESIN_PORT: 2260
     ports:
-      - "2260:2260"
+      - "127.0.0.1:2260:2260"
+      - "2261:2261"
     volumes:
       - ./data/cache:/var/cache/resin
       - ./data/state:/var/lib/resin
       - ./data/log:/var/log/resin
+
 ```
 运行 `docker compose up -d` 启动服务。
-
-自定义接入点端口还必须能从容器外访问。Docker 无法为已运行容器动态增加端口映射，因此请在 `ports` 中提前映射所需端口范围（例如 `"2300-2399:2300-2399"`），或在适合的环境中使用 host 网络。
 
 *(如果你不想使用 Docker，请跳转文末查看 [其他部署方式](#其他部署方式))*
 

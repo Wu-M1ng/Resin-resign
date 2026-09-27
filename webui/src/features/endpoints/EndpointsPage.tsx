@@ -26,12 +26,16 @@ import type { Endpoint, EndpointInput } from "./types";
 
 type EndpointFormState = {
   port: string;
+  listen_address: string;
   enabled: boolean;
   allow_management: boolean;
   require_proxy_auth_info: boolean;
   allow_http_forward: boolean;
   allow_http_reverse: boolean;
   allow_socks5: boolean;
+  tls_enabled: boolean;
+  tls_cert_file: string;
+  tls_key_file: string;
 };
 
 type TranslateFn = (text: string, options?: Record<string, unknown>) => string;
@@ -46,12 +50,16 @@ const REQUIRE_PROXY_AUTH_HINT = `一些应用（例如浏览器）只有在代�
 
 const DEFAULT_FORM: EndpointFormState = {
   port: "",
+  listen_address: "0.0.0.0",
   enabled: true,
   allow_management: false,
   require_proxy_auth_info: false,
   allow_http_forward: true,
   allow_http_reverse: true,
   allow_socks5: true,
+  tls_enabled: false,
+  tls_cert_file: "",
+  tls_key_file: "",
 };
 
 function endpointToForm(endpoint: Endpoint | null): EndpointFormState {
@@ -61,6 +69,7 @@ function endpointToForm(endpoint: Endpoint | null): EndpointFormState {
 
   return {
     port: String(endpoint.port),
+    listen_address: endpoint.listen_address || "0.0.0.0",
     enabled: endpoint.enabled,
     allow_management: endpoint.allow_management,
     require_proxy_auth_info:
@@ -68,6 +77,9 @@ function endpointToForm(endpoint: Endpoint | null): EndpointFormState {
     allow_http_forward: endpoint.allow_http_forward,
     allow_http_reverse: endpoint.allow_http_reverse,
     allow_socks5: endpoint.allow_socks5,
+    tls_enabled: endpoint.tls_enabled,
+    tls_cert_file: endpoint.tls_cert_file,
+    tls_key_file: endpoint.tls_key_file,
   };
 }
 
@@ -84,6 +96,13 @@ function parseEndpointForm(
   if (endpoints.some((endpoint) => endpoint.id !== editingID && endpoint.port === port)) {
     throw new Error(t("端口 {{port}} 已被其他接入点使用", { port }));
   }
+  const listenAddress = form.listen_address.trim();
+  if (!listenAddress) {
+    throw new Error(t("监听地址不能为空"));
+  }
+  if (form.tls_enabled && (!form.tls_cert_file.trim() || !form.tls_key_file.trim())) {
+    throw new Error(t("启用 TLS 时必须填写证书和私钥路径"));
+  }
 
   const allowProxy = form.allow_http_forward || form.allow_http_reverse || form.allow_socks5;
   if (!form.allow_management && !allowProxy) {
@@ -95,6 +114,7 @@ function parseEndpointForm(
 
   return {
     port,
+    listen_address: listenAddress,
     enabled: form.enabled,
     allow_management: form.allow_management,
     allow_proxy: allowProxy,
@@ -102,6 +122,9 @@ function parseEndpointForm(
     allow_http_forward: form.allow_http_forward,
     allow_http_reverse: form.allow_http_reverse,
     allow_socks5: form.allow_socks5,
+    tls_enabled: form.tls_enabled,
+    tls_cert_file: form.tls_cert_file.trim(),
+    tls_key_file: form.tls_key_file.trim(),
   };
 }
 
@@ -213,6 +236,23 @@ function EndpointForm({ endpoint, endpoints, pending, onClose, onSubmit }: Endpo
       </div>
 
       <div className="field-group field-span-2">
+        <label className="field-label" htmlFor="endpoint-listen-address">
+          {t("监听地址")}
+        </label>
+        <Input
+          id="endpoint-listen-address"
+          value={form.listen_address}
+          disabled={readOnly}
+          onChange={(event) => {
+            setForm((current) => ({ ...current, listen_address: event.target.value }));
+            setFormError("");
+          }}
+          placeholder="0.0.0.0"
+        />
+        <p className="muted">{t("公网 SOCKS5 入口通常填写 0.0.0.0；仅本机访问可填写 127.0.0.1。")}</p>
+      </div>
+
+      <div className="field-group field-span-2">
         <label className="field-label">{t("接入能力")}</label>
         <div className="subscription-switch-group">
           <div className="subscription-switch-item">
@@ -292,6 +332,60 @@ function EndpointForm({ endpoint, endpoints, pending, onClose, onSubmit }: Endpo
           />
         </div>
       </div>
+
+      <div className="field-group field-span-2">
+        <label className="field-label">{t("TLS 加密")}</label>
+        <div className="subscription-switch-item">
+          <label className="subscription-switch-label" htmlFor="endpoint-tls-enabled">
+            {t("启用原生 TLS")}
+          </label>
+          <Switch
+            id="endpoint-tls-enabled"
+            checked={form.tls_enabled}
+            disabled={readOnly}
+            onChange={(event) => {
+              setForm((current) => ({ ...current, tls_enabled: event.target.checked }));
+              setFormError("");
+            }}
+          />
+        </div>
+      </div>
+
+      {form.tls_enabled ? (
+        <>
+          <div className="field-group">
+            <label className="field-label" htmlFor="endpoint-tls-cert">
+              {t("证书文件")}
+            </label>
+            <Input
+              id="endpoint-tls-cert"
+              value={form.tls_cert_file}
+              disabled={readOnly}
+              onChange={(event) => {
+                setForm((current) => ({ ...current, tls_cert_file: event.target.value }));
+                setFormError("");
+              }}
+              placeholder="/etc/resin/tls/fullchain.pem"
+            />
+          </div>
+          <div className="field-group">
+            <label className="field-label" htmlFor="endpoint-tls-key">
+              {t("私钥文件")}
+            </label>
+            <Input
+              id="endpoint-tls-key"
+              value={form.tls_key_file}
+              disabled={readOnly}
+              onChange={(event) => {
+                setForm((current) => ({ ...current, tls_key_file: event.target.value }));
+                setFormError("");
+              }}
+              placeholder="/etc/resin/tls/privkey.pem"
+            />
+          </div>
+          <p className="muted field-span-2">{t("证书和私钥路径必须是 Resin 容器内可读取的路径。")}</p>
+        </>
+      ) : null}
 
       {formError ? (
         <div className="callout callout-error field-span-2" role="alert">
@@ -558,6 +652,8 @@ export function EndpointsPage() {
                       aria-label={status.label}
                     />
                     <p>{endpoint.port}</p>
+                    <code className="endpoint-listen-address">{endpoint.listen_address || "0.0.0.0"}</code>
+                    {endpoint.tls_enabled ? <Badge variant="success">TLS</Badge> : null}
                     {endpoint.read_only ? (
                       <div className="endpoint-tile-badges">
                         <Badge

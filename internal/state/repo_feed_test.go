@@ -18,6 +18,7 @@ func testFeed(t *testing.T, id, name string) model.SubscriptionFeed {
 	return model.SubscriptionFeed{
 		ID: id, Name: name, PlatformID: "platform-1", DefaultFormat: "clash-meta",
 		EnabledFormatsJSON: `["clash-meta","singbox"]`, UnsupportedPolicy: "skip",
+		RelayEnabled: true, RelayHost: "resin.example.com", RelayPort: 2261,
 		Pretty: true, Enabled: true, TokenHash: hash, TokenPrefix: prefix,
 		CreatedAtNs: 100, UpdatedAtNs: 200,
 	}
@@ -34,7 +35,7 @@ func TestFeedRepoCRUDAndTokenLookup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetFeed: %v", err)
 	}
-	if got.ID != want.ID || got.Name != want.Name || !got.Pretty || !got.Enabled {
+	if got.ID != want.ID || got.Name != want.Name || !got.Pretty || !got.Enabled || !got.RelayEnabled || got.RelayHost != want.RelayHost || got.RelayPort != want.RelayPort {
 		t.Fatalf("GetFeed = %+v, want %+v", got, want)
 	}
 	if got.TokenHash != want.TokenHash || got.TokenPrefix != want.TokenPrefix {

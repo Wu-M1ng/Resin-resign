@@ -6,6 +6,11 @@ export type SubscriptionFeed = {
   name: string;
   platform_id: string;
   subscription_ids: string[];
+  relay_enabled: boolean;
+  relay_host: string;
+  relay_port: number;
+  relay_tls: boolean;
+  relay_server_name: string;
   default_format: FeedFormat;
   enabled_formats: FeedFormat[];
   unsupported_policy: FeedUnsupportedPolicy;
@@ -31,6 +36,11 @@ export type FeedInput = {
   name: string;
   platform_id: string;
   subscription_ids: string[];
+  relay_enabled: boolean;
+  relay_host: string;
+  relay_port: number;
+  relay_tls: boolean;
+  relay_server_name: string;
   default_format: FeedFormat;
   enabled_formats: FeedFormat[];
   unsupported_policy: FeedUnsupportedPolicy;
