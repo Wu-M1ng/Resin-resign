@@ -7,6 +7,8 @@ import { useI18n } from "../../i18n";
 import { getEnvConfig } from "../systemConfig/api";
 
 const PROXY_TOKEN_STORAGE_KEY = "resin_proxy_token";
+const EXTERNAL_HOST_STORAGE_KEY = "resin_external_proxy_host";
+const EXTERNAL_PORT_STORAGE_KEY = "resin_external_proxy_port";
 const TOKEN_PLACEHOLDER = "<token>";
 
 type ProxyEndpoint = { scheme: string; host: string };
@@ -29,6 +31,24 @@ function persistProxyToken(value: string): void {
   }
 }
 
+function loadStoredValue(key: string): string {
+  if (typeof window === "undefined") {
+    return "";
+  }
+  return window.localStorage.getItem(key) ?? "";
+}
+
+function persistStoredValue(key: string, value: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  if (value) {
+    window.localStorage.setItem(key, value);
+  } else {
+    window.localStorage.removeItem(key);
+  }
+}
+
 function formatHostWithPort(hostname: string, port: number): string {
   const host = hostname.includes(":") && !hostname.startsWith("[") ? `[${hostname}]` : hostname;
   return port ? `${host}:${port}` : host;
@@ -45,6 +65,21 @@ function configuredApiEndpoint(): ProxyEndpoint | null {
   } catch {
     return null;
   }
+}
+
+function defaultExternalHost(): string {
+  const apiBase = import.meta.env.VITE_API_BASE_URL?.trim();
+  if (apiBase && /^https?:\/\//i.test(apiBase)) {
+    try {
+      return new URL(apiBase).hostname;
+    } catch {
+      // Fall through to the browser host when the build-time API URL is invalid.
+    }
+  }
+  if (typeof window !== "undefined" && window.location.hostname) {
+    return window.location.hostname;
+  }
+  return "";
 }
 
 function currentProxyEndpoint(fallbackPort: number): ProxyEndpoint {
@@ -178,6 +213,10 @@ export function PlatformAccessPanel({ platformName }: PlatformAccessPanelProps) 
   const [account, setAccount] = useState("");
   const [token, setToken] = useState(loadStoredProxyToken);
   const [target, setTarget] = useState("https://api.ipify.org");
+  const [externalHost, setExternalHost] = useState(
+    () => loadStoredValue(EXTERNAL_HOST_STORAGE_KEY) || defaultExternalHost(),
+  );
+  const [externalPort, setExternalPort] = useState(() => loadStoredValue(EXTERNAL_PORT_STORAGE_KEY));
 
   const envQuery = useQuery({
     queryKey: ["system-env-config"],
@@ -190,10 +229,21 @@ export function PlatformAccessPanel({ platformName }: PlatformAccessPanelProps) 
   const endpoint = currentProxyEndpoint(env?.resin_port ?? 2260);
   const host = endpoint.host;
   const scheme = endpoint.scheme;
+  const externalPortForDisplay = externalPort || String(env?.resin_port ?? 2260);
 
   const handleTokenChange = (value: string) => {
     setToken(value);
     persistProxyToken(value.trim());
+  };
+
+  const handleExternalHostChange = (value: string) => {
+    setExternalHost(value);
+    persistStoredValue(EXTERNAL_HOST_STORAGE_KEY, value.trim());
+  };
+
+  const handleExternalPortChange = (value: string) => {
+    setExternalPort(value);
+    persistStoredValue(EXTERNAL_PORT_STORAGE_KEY, value.trim());
   };
 
   const urls = useMemo(() => {
@@ -217,6 +267,17 @@ export function PlatformAccessPanel({ platformName }: PlatformAccessPanelProps) 
     const httpForward = `http://${userInfo}@${host}`;
     const socksForward = `socks5h://${userInfo}@${host}`;
 
+    const parsedExternalPort = Number(externalPortForDisplay.trim());
+    const externalPortValid =
+      /^\d+$/.test(externalPortForDisplay.trim()) &&
+      Number.isInteger(parsedExternalPort) &&
+      parsedExternalPort >= 1 &&
+      parsedExternalPort <= 65535;
+    const externalAddress =
+      externalHost.trim() && externalPortValid ? formatHostWithPort(externalHost.trim(), parsedExternalPort) : "";
+    const externalHttp = externalAddress ? `http://${userInfo}@${externalAddress}` : "";
+    const externalSocks = externalAddress ? `socks5://${userInfo}@${externalAddress}` : "";
+
     const reverseTokenSeg = proxyTokenSet ? encodeSegment(tokenRaw || TOKEN_PLACEHOLDER) : "";
     const parsed = parseTarget(target);
     const reverseUrl = parsed
@@ -233,8 +294,17 @@ export function PlatformAccessPanel({ platformName }: PlatformAccessPanelProps) 
     ].join(" ");
     const curlReverse = reverseUrl ? `curl ${shellQuote(reverseUrl)}` : "";
 
-    return { httpForward, socksForward, reverseUrl, curlForward, curlReverse };
-  }, [platformName, account, token, proxyTokenSet, host, scheme, target]);
+    return {
+      httpForward,
+      socksForward,
+      externalHttp,
+      externalSocks,
+      externalAddress,
+      reverseUrl,
+      curlForward,
+      curlReverse,
+    };
+  }, [platformName, account, token, proxyTokenSet, host, scheme, target, externalHost, externalPortForDisplay]);
 
   const copyLabel = t("复制");
   const copiedLabel = t("已复制");
@@ -314,6 +384,66 @@ export function PlatformAccessPanel({ platformName }: PlatformAccessPanelProps) 
           copyLabel={copyLabel}
           copiedLabel={copiedLabel}
         />
+      </div>
+
+      <div className="platform-access-group">
+        <h5>{t("外部导入")}</h5>
+        <p className="platform-access-note">
+          <Info size={14} />
+          <span>{t("填写客户端可访问的公网主机和端口，生成的地址会包含端口号。")}</span>
+        </p>
+        <div className="platform-access-inputs">
+          <div className="field-group">
+            <label className="field-label" htmlFor="access-external-host">
+              {t("外部主机")}
+            </label>
+            <Input
+              id="access-external-host"
+              placeholder={t("例如 resin.example.com")}
+              value={externalHost}
+              onChange={(event) => handleExternalHostChange(event.target.value)}
+              autoComplete="off"
+            />
+          </div>
+          <div className="field-group">
+            <label className="field-label" htmlFor="access-external-port">
+              {t("外部端口")}
+            </label>
+            <Input
+              id="access-external-port"
+              type="number"
+              min={1}
+              max={65535}
+              placeholder={t("例如 2261")}
+              value={externalPortForDisplay}
+              onChange={(event) => handleExternalPortChange(event.target.value)}
+              inputMode="numeric"
+            />
+          </div>
+        </div>
+        {urls.externalAddress ? (
+          <>
+            <CopyField
+              label={t("HTTP 外部导入")}
+              value={urls.externalHttp}
+              copyLabel={copyLabel}
+              copiedLabel={copiedLabel}
+            />
+            <CopyField
+              label={t("SOCKS5 外部导入")}
+              value={urls.externalSocks}
+              copyLabel={copyLabel}
+              copiedLabel={copiedLabel}
+            />
+            <p className="muted" style={{ margin: 0, fontSize: 12 }}>
+              {t("这里生成的是普通 TCP 代理地址；TLS SOCKS5 需要在客户端单独配置 TLS。")}
+            </p>
+          </>
+        ) : (
+          <p className="muted" style={{ margin: 0, fontSize: 12 }}>
+            {t("请输入外部主机和 1-65535 范围内的端口。")}
+          </p>
+        )}
       </div>
 
       <div className="platform-access-group">

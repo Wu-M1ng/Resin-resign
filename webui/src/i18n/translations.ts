@@ -413,6 +413,19 @@ Note: Once enabled, requests without authentication information are rejected ins
   "反向代理地址": "Reverse Proxy URL",
   "请输入合法的 http/https 目标网址以生成反向代理地址。":
     "Enter a valid http/https target URL to generate the reverse proxy URL.",
+  "外部导入": "External Import",
+  "填写客户端可访问的公网主机和端口，生成的地址会包含端口号。":
+    "Enter a public host and port reachable by the client; generated addresses include the port.",
+  "外部主机": "External Host",
+  "外部端口": "External Port",
+  "例如 resin.example.com": "e.g. resin.example.com",
+  "例如 2261": "e.g. 2261",
+  "HTTP 外部导入": "HTTP External Import",
+  "SOCKS5 外部导入": "SOCKS5 External Import",
+  "这里生成的是普通 TCP 代理地址；TLS SOCKS5 需要在客户端单独配置 TLS。":
+    "These are plain TCP proxy addresses; configure TLS separately in the client for TLS SOCKS5.",
+  "请输入外部主机和 1-65535 范围内的端口。":
+    "Enter an external host and a port from 1 to 65535.",
   "复制": "Copy",
   "已复制": "Copied",
   "HTTP": "HTTP",
