@@ -93,7 +93,7 @@ func shouldRouteForwardProxy(r *http.Request) bool {
 }
 
 func shouldRouteTokenAPI(r *http.Request, proxyToken string) bool {
-	if r == nil {
+	if r == nil || strings.TrimSpace(proxyToken) == "" {
 		return false
 	}
 	segments := escapedPathSegments(r)

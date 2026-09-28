@@ -176,7 +176,7 @@ func TestInboundMux_RejectsReverseWhenTokenMissingOrWrong(t *testing.T) {
 	}
 }
 
-func TestInboundMux_EmptyProxyToken_AllowsDummyTokenForTokenAction(t *testing.T) {
+func TestInboundMux_EmptyProxyToken_DoesNotRouteTokenAction(t *testing.T) {
 	mux := newInboundMux(
 		"",
 		tagHandler("forward", http.StatusOK),
@@ -189,12 +189,12 @@ func TestInboundMux_EmptyProxyToken_AllowsDummyTokenForTokenAction(t *testing.T)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 
-	if rec.Header().Get("X-Route") != "token-action" {
-		t.Fatalf("expected token-action route when proxy token empty, got %q", rec.Header().Get("X-Route"))
+	if rec.Header().Get("X-Route") == "token-action" {
+		t.Fatal("empty proxy token must not route token actions")
 	}
 }
 
-func TestInboundMux_EmptyProxyToken_AllowsEmptyTokenSegmentForTokenAction(t *testing.T) {
+func TestInboundMux_EmptyProxyToken_DoesNotRouteEmptyTokenAction(t *testing.T) {
 	mux := newInboundMux(
 		"",
 		tagHandler("forward", http.StatusOK),
@@ -207,12 +207,12 @@ func TestInboundMux_EmptyProxyToken_AllowsEmptyTokenSegmentForTokenAction(t *tes
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 
-	if rec.Header().Get("X-Route") != "token-action" {
-		t.Fatalf("expected token-action route with empty token segment, got %q", rec.Header().Get("X-Route"))
+	if rec.Header().Get("X-Route") == "token-action" {
+		t.Fatal("empty proxy token must not route token actions")
 	}
 }
 
-func TestInboundMux_EmptyProxyToken_RoutesNonActionTokenNamespaceToTokenAction(t *testing.T) {
+func TestInboundMux_EmptyProxyToken_DoesNotRouteNonActionTokenNamespace(t *testing.T) {
 	mux := newInboundMux(
 		"",
 		tagHandler("forward", http.StatusOK),
@@ -225,8 +225,8 @@ func TestInboundMux_EmptyProxyToken_RoutesNonActionTokenNamespaceToTokenAction(t
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 
-	if rec.Header().Get("X-Route") != "token-action" {
-		t.Fatalf("expected token-action route for non-action token namespace, got %q", rec.Header().Get("X-Route"))
+	if rec.Header().Get("X-Route") == "token-action" {
+		t.Fatal("empty proxy token must not route token actions")
 	}
 }
 

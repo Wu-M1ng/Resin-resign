@@ -49,7 +49,9 @@ location ^~ / {
 
 Token 放在 URL 路径中，OpenResty 默认访问日志可能记录完整地址。建议为 `/sub/` 单独关闭访问日志或配置脱敏规则；Token 泄露后应立即在管理页面轮换。
 
-中转端口需要在 Resin 的“端点”中创建或启用 SOCKS5 监听，例如 `2261`，并在 VPS 防火墙放行该 TCP 端口。需要加密时，在端点中填写：
+启用“通过 Resin 中转”时，生成的 SOCKS5 节点密码使用该 Feed 自己的完整 Token，不再使用全局 `RESIN_PROXY_TOKEN`；普通 HTTP/SOCKS5 正向代理仍按全局密码认证。每个 Feed 的 Token 只允许访问该 Feed 当前绑定的平台、指定的中转端口和 TLS 端点，客户端提交的用户名中的平台名不会覆盖这个绑定；用户名仍可带一个可选的账号后缀用于粘性路由。中转 Feed 必须启用 TLS 并填写证书域名，旧的明文或缺少 SNI 的中转配置不会继续生效。轮换、禁用、修改或删除 Feed 会关闭已有中转连接，同时使公开订阅地址和该 Feed 的中转凭据失效，客户端需要重新刷新订阅。后台预览不会输出中转密码。
+
+中转端口需要在 Resin 的“端点”中创建或启用 SOCKS5 监听，例如 `2261`，并在 VPS 防火墙放行该 TCP 端口。该端点必须启用 TLS，在 Feed 的中转设置中使用相同端口和证书域名：
 
 - 监听地址：`0.0.0.0`
 - 监听端口：`2261`
@@ -60,6 +62,6 @@ Token 放在 URL 路径中，OpenResty 默认访问日志可能记录完整地�
 
 证书路径必须是 Resin 容器内的路径，并确保私钥对容器内的 `resin` 用户可读。Feed 的 Resin 中转选项中填写公网域名、`2261`、TLS 和证书域名（SNI）。Clash Meta 和 sing-box 可以表达 TLS SOCKS5；标准 `socks5://` URI 没有统一的 TLS 参数，因此 URI/V2Ray 输出会跳过该中转节点并在响应头中报告跳过类型。
 
-HTTP 反代只负责 `/sub/` 订阅地址；SOCKS5 客户端必须直连该 TCP 端口，不能通过普通 `location proxy_pass` 转换。
+HTTP 反代只负责 `/sub/` 订阅地址；SOCKS5 客户端必须直连该 TCP 端口，不能通过普通 `location proxy_pass` 转换。生产运行时即使 `RESIN_PROXY_TOKEN` 被显式设为空，HTTP 正向、HTTP 反向和普通 SOCKS5 也不会开放匿名访问；请使用非空全局代理密码。
 
 如果订阅为空，先检查 Platform 是否有可路由节点。节点必须已生成 outbound、完成出口和延迟探测，且没有被禁用或熔断。

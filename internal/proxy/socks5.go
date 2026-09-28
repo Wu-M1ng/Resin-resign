@@ -34,29 +34,47 @@ const (
 
 var socks5HandshakeTimeout = 15 * time.Second
 
+// RelayCredential describes the endpoint and lifecycle scope of a Feed token.
+// The resolver is the authorization boundary for relay credentials; callers
+// must not replace these fields with values supplied by the client.
+type RelayCredential struct {
+	PlatformName string
+	RelayPort    int
+	RequireTLS   bool
+	Revoked      <-chan struct{}
+}
+
+// RelayCredentialResolver validates a scoped Feed token. It is intentionally
+// separate from the global proxy token used by the regular HTTP/SOCKS5
+// interfaces.
+type RelayCredentialResolver func(token string) (RelayCredential, bool)
+
 // Socks5InboundConfig holds dependencies for the SOCKS5 inbound handler.
 type Socks5InboundConfig struct {
-	ProxyToken       string
-	Router           *routing.Router
-	Pool             outbound.PoolAccessor
-	Health           HealthRecorder
-	Events           EventEmitter
-	MetricsSink      MetricsEventSink
-	ProxyBypassRules []string
+	ProxyToken              string
+	RelayCredentialResolver RelayCredentialResolver
+	Router                  *routing.Router
+	Pool                    outbound.PoolAccessor
+	Health                  HealthRecorder
+	Events                  EventEmitter
+	MetricsSink             MetricsEventSink
+	ProxyBypassRules        []string
 }
 
 // Socks5Inbound implements SOCKS5 CONNECT over a raw TCP connection.
 type Socks5Inbound struct {
-	token  string
-	tunnel tunnelDeps
-	events EventEmitter
+	token                   string
+	relayCredentialResolver RelayCredentialResolver
+	tunnel                  tunnelDeps
+	events                  EventEmitter
 }
 
 type socks5HandshakeResult struct {
-	platformName string
-	account      string
-	target       string
-	ok           bool
+	platformName    string
+	account         string
+	target          string
+	relayCredential *RelayCredential
+	ok              bool
 }
 
 // NewSocks5Inbound creates a new SOCKS5 inbound handler.
@@ -66,7 +84,8 @@ func NewSocks5Inbound(cfg Socks5InboundConfig) *Socks5Inbound {
 		ev = NoOpEventEmitter{}
 	}
 	return &Socks5Inbound{
-		token: cfg.ProxyToken,
+		token:                   cfg.ProxyToken,
+		relayCredentialResolver: cfg.RelayCredentialResolver,
 		tunnel: tunnelDeps{
 			router:      cfg.Router,
 			pool:        cfg.Pool,
@@ -99,8 +118,10 @@ func (s *Socks5Inbound) ServeConnContext(baseCtx context.Context, conn net.Conn)
 	handshakePhase := startSocks5HandshakePhase(handshakeCtx, conn)
 	defer handshakePhase.Stop()
 
-	requireAuthInfo := InboundPolicyFromContext(baseCtx).RequireProxyAuthInfo && s.token == ""
-	handshake := s.performHandshake(conn, reader, requireAuthInfo)
+	policy := InboundPolicyFromContext(baseCtx)
+	requireAuthInfo := policy.RequireProxyAuthInfo && s.token == ""
+	endpoint, endpointSet := InboundEndpointFromContext(baseCtx)
+	handshake := s.performHandshake(conn, reader, requireAuthInfo, endpoint, endpointSet)
 	if !handshake.ok {
 		return
 	}
@@ -117,8 +138,14 @@ func (s *Socks5Inbound) ServeConnContext(baseCtx context.Context, conn net.Conn)
 	lifecycle.setAccount(handshake.account)
 	defer lifecycle.finish()
 
+	sessionCtx := baseCtx
+	stopRelayWatcher := func() {}
+	if handshake.relayCredential != nil {
+		sessionCtx, stopRelayWatcher = watchRelayRevocation(sessionCtx, conn, handshake.relayCredential.Revoked)
+	}
+	defer stopRelayWatcher()
 	prepare := prepareConnectTunnel(
-		baseCtx,
+		sessionCtx,
 		s.tunnel,
 		handshake.platformName,
 		handshake.account,
@@ -162,7 +189,7 @@ func (s *Socks5Inbound) ServeConnContext(baseCtx context.Context, conn net.Conn)
 	prepare.session.recordResult(relay.netOK)
 }
 
-func (s *Socks5Inbound) performHandshake(conn net.Conn, reader *bufio.Reader, requireAuthInfo bool) socks5HandshakeResult {
+func (s *Socks5Inbound) performHandshake(conn net.Conn, reader *bufio.Reader, requireAuthInfo bool, endpoint InboundEndpoint, endpointSet bool) socks5HandshakeResult {
 	method, ok := s.negotiateMethod(conn, reader, requireAuthInfo)
 	if !ok {
 		return socks5HandshakeResult{}
@@ -171,7 +198,7 @@ func (s *Socks5Inbound) performHandshake(conn net.Conn, reader *bufio.Reader, re
 	result := socks5HandshakeResult{ok: true}
 	if method == socks5MethodUserPass {
 		var authOK bool
-		result.platformName, result.account, authOK = s.authenticateUserPass(conn, reader, requireAuthInfo)
+		result.platformName, result.account, result.relayCredential, authOK = s.authenticateUserPassWithEndpoint(conn, reader, requireAuthInfo, endpoint, endpointSet)
 		if !authOK {
 			return socks5HandshakeResult{}
 		}
@@ -187,6 +214,35 @@ func (s *Socks5Inbound) performHandshake(conn net.Conn, reader *bufio.Reader, re
 
 	result.target = target
 	return result
+}
+
+func watchRelayRevocation(ctx context.Context, conn net.Conn, revoked <-chan struct{}) (context.Context, context.CancelFunc) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	sessionCtx, cancel := context.WithCancel(ctx)
+	if revoked == nil {
+		return sessionCtx, cancel
+	}
+	stop := make(chan struct{})
+	var stopOnce sync.Once
+	stopWatcher := func() {
+		stopOnce.Do(func() {
+			close(stop)
+			cancel()
+		})
+	}
+	go func() {
+		select {
+		case <-revoked:
+			cancel()
+			if conn != nil {
+				_ = conn.Close()
+			}
+		case <-stop:
+		}
+	}()
+	return sessionCtx, stopWatcher
 }
 
 type socks5HandshakePhase struct {
@@ -258,7 +314,7 @@ func (s *Socks5Inbound) negotiateMethod(conn net.Conn, reader *bufio.Reader, req
 	}
 
 	selected := byte(socks5MethodNoAcceptable)
-	if s.token != "" || requireAuthInfo {
+	if s.token != "" || s.relayCredentialResolver != nil || requireAuthInfo {
 		if containsSocks5Method(methods, socks5MethodUserPass) {
 			selected = socks5MethodUserPass
 		}
@@ -281,44 +337,70 @@ func (s *Socks5Inbound) negotiateMethod(conn net.Conn, reader *bufio.Reader, req
 }
 
 func (s *Socks5Inbound) authenticateUserPass(conn net.Conn, reader *bufio.Reader, requireAuthInfo bool) (string, string, bool) {
+	platformName, account, _, ok := s.authenticateUserPassWithEndpoint(conn, reader, requireAuthInfo, InboundEndpoint{}, false)
+	return platformName, account, ok
+}
+
+func (s *Socks5Inbound) authenticateUserPassWithEndpoint(conn net.Conn, reader *bufio.Reader, requireAuthInfo bool, endpoint InboundEndpoint, endpointSet bool) (string, string, *RelayCredential, bool) {
 	header := make([]byte, 2)
 	if _, err := io.ReadFull(reader, header); err != nil {
-		return "", "", false
+		return "", "", nil, false
 	}
 	if header[0] != socks5UserPassVersion {
 		_, _ = conn.Write([]byte{socks5UserPassVersion, socks5UserPassStatusFailure})
-		return "", "", false
+		return "", "", nil, false
 	}
 
 	username := make([]byte, int(header[1]))
 	if _, err := io.ReadFull(reader, username); err != nil {
-		return "", "", false
+		return "", "", nil, false
 	}
 
 	plen := []byte{0}
 	if _, err := io.ReadFull(reader, plen); err != nil {
-		return "", "", false
+		return "", "", nil, false
 	}
 	password := make([]byte, int(plen[0]))
 	if _, err := io.ReadFull(reader, password); err != nil {
-		return "", "", false
+		return "", "", nil, false
 	}
 
-	if s.token != "" && string(password) != s.token {
-		_, _ = conn.Write([]byte{socks5UserPassVersion, socks5UserPassStatusFailure})
-		return "", "", false
-	}
 	if requireAuthInfo && (len(username) == 0 || len(password) == 0) {
 		_, _ = conn.Write([]byte{socks5UserPassVersion, socks5UserPassStatusFailure})
-		return "", "", false
-	}
-
-	if _, err := conn.Write([]byte{socks5UserPassVersion, socks5UserPassStatusSuccess}); err != nil {
-		return "", "", false
+		return "", "", nil, false
 	}
 
 	platformName, account := parseV1PlatformAccountIdentity(string(username))
-	return platformName, account, true
+	var relayCredential *RelayCredential
+	passwordValue := string(password)
+	switch {
+	case s.token != "" && passwordValue == s.token:
+		// The global token is valid on any endpoint and does not carry a Feed
+		// revocation scope.
+	case s.relayCredentialResolver != nil:
+		if !endpointSet || !endpoint.TLSEnabled {
+			_, _ = conn.Write([]byte{socks5UserPassVersion, socks5UserPassStatusFailure})
+			return "", "", nil, false
+		}
+		credential, ok := s.relayCredentialResolver(passwordValue)
+		if !ok || credential.PlatformName == "" || credential.RelayPort < 1 || credential.RelayPort > 65535 || !credential.RequireTLS || credential.Revoked == nil || endpoint.Port != credential.RelayPort {
+			_, _ = conn.Write([]byte{socks5UserPassVersion, socks5UserPassStatusFailure})
+			return "", "", nil, false
+		}
+		// The Feed token, rather than the client-supplied username, chooses the
+		// platform. Keep only the optional account suffix from the username.
+		platformName = credential.PlatformName
+		relayCredential = &credential
+	case s.token != "":
+		_, _ = conn.Write([]byte{socks5UserPassVersion, socks5UserPassStatusFailure})
+		return "", "", nil, false
+	}
+
+	if _, err := conn.Write([]byte{socks5UserPassVersion, socks5UserPassStatusSuccess}); err != nil {
+		return "", "", nil, false
+	}
+
+	return platformName, account, relayCredential, true
 }
 
 func containsSocks5Method(methods []byte, candidate byte) bool {

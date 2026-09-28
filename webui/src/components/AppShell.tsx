@@ -69,7 +69,7 @@ export function AppShell() {
     authWarnings.push(t("RESIN_ADMIN_TOKEN 为空，控制面 API 免认证"));
   }
   if (envConfig && !envConfig.proxy_token_set) {
-    authWarnings.push(t("RESIN_PROXY_TOKEN 为空，正/反向代理免认证"));
+    authWarnings.push(t("RESIN_PROXY_TOKEN 为空，生产代理请求会被拒绝"));
   }
   if (envConfig && envConfig.admin_token_set && envConfig.admin_token_weak) {
     authWarnings.push(t("RESIN_ADMIN_TOKEN 强度较弱，建议更换为更高熵随机令牌"));

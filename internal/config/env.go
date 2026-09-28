@@ -172,7 +172,7 @@ func LoadEnvConfig() (*EnvConfig, error) {
 		errs = append(errs, "RESIN_ADMIN_TOKEN must be defined. If you intend to use an empty token, please set it explicitly (e.g., RESIN_ADMIN_TOKEN=).")
 	}
 	if !hasProxyToken {
-		errs = append(errs, "RESIN_PROXY_TOKEN must be defined. If you intend to use an empty token, please set it explicitly (e.g., RESIN_PROXY_TOKEN=).")
+		errs = append(errs, "RESIN_PROXY_TOKEN must be defined. Set a non-empty random value for proxy access; an explicit empty value disables production proxy endpoints.")
 	} else {
 		if cfg.ProxyToken != "" {
 			if err := ValidateProxyTokenForV1(cfg.ProxyToken); err != nil {

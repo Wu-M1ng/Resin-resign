@@ -14,6 +14,7 @@ import (
 	"github.com/Resinat/Resin/internal/feed"
 	"github.com/Resinat/Resin/internal/model"
 	"github.com/Resinat/Resin/internal/node"
+	"github.com/Resinat/Resin/internal/proxy"
 	"github.com/Resinat/Resin/internal/state"
 	"github.com/Resinat/Resin/internal/subscription"
 	"github.com/google/uuid"
@@ -123,8 +124,14 @@ func validateFeedSettings(name, platformID string, subscriptionIDs []string, rel
 		if relayPort < 1 || relayPort > 65535 {
 			return invalidArg("relay_port must be between 1 and 65535")
 		}
-		if relayTLS && strings.TrimSpace(relayServerName) == "" {
-			return invalidArg("relay_server_name is required when relay_tls is true")
+		if !relayTLS {
+			return invalidArg("relay_tls must be enabled when relay_enabled is true")
+		}
+		if strings.TrimSpace(relayServerName) == "" {
+			return invalidArg("relay_server_name is required when relay_enabled is true")
+		}
+		if strings.Contains(relayServerName, "://") || strings.ContainsAny(relayServerName, "/?#\t\r\n ") {
+			return invalidArg("relay_server_name must be a hostname or IP address without a scheme")
 		}
 	}
 	if len(formats) == 0 {
@@ -278,6 +285,8 @@ func (s *ControlPlaneService) CreateFeed(req CreateFeedRequest) (*FeedResponse, 
 }
 
 func (s *ControlPlaneService) UpdateFeed(id string, raw json.RawMessage) (*FeedResponse, error) {
+	s.relayMu.Lock()
+	defer s.relayMu.Unlock()
 	m, err := s.getFeedModel(id)
 	if err != nil {
 		return nil, err
@@ -399,6 +408,7 @@ func (s *ControlPlaneService) UpdateFeed(id string, raw json.RawMessage) (*FeedR
 		}
 		return nil, internal("update feed", err)
 	}
+	s.revokeRelayCredentialLocked(m.TokenHash)
 	s.invalidateFeedCache(id)
 	resp, err := feedToResponse(*m, "")
 	if err != nil {
@@ -408,21 +418,31 @@ func (s *ControlPlaneService) UpdateFeed(id string, raw json.RawMessage) (*FeedR
 }
 
 func (s *ControlPlaneService) DeleteFeed(id string) error {
+	s.relayMu.Lock()
+	defer s.relayMu.Unlock()
+	m, err := s.getFeedModel(id)
+	if err != nil {
+		return err
+	}
 	if err := s.Engine.DeleteFeed(id); err != nil {
 		if errors.Is(err, state.ErrNotFound) {
 			return notFound("feed not found")
 		}
 		return internal("delete feed", err)
 	}
+	s.revokeRelayCredentialLocked(m.TokenHash)
 	s.invalidateFeedCache(id)
 	return nil
 }
 
 func (s *ControlPlaneService) RotateFeedToken(id string) (*FeedResponse, error) {
+	s.relayMu.Lock()
+	defer s.relayMu.Unlock()
 	m, err := s.getFeedModel(id)
 	if err != nil {
 		return nil, err
 	}
+	oldTokenHash := m.TokenHash
 	plain, hash, prefix, err := feed.GenerateToken()
 	if err != nil {
 		return nil, internal("generate feed token", err)
@@ -431,6 +451,7 @@ func (s *ControlPlaneService) RotateFeedToken(id string) (*FeedResponse, error) 
 	if err := s.Engine.UpdateFeed(*m); err != nil {
 		return nil, internal("rotate feed token", err)
 	}
+	s.revokeRelayCredentialLocked(oldTokenHash)
 	s.invalidateFeedCache(id)
 	resp, err := feedToResponse(*m, plain)
 	if err != nil {
@@ -457,7 +478,10 @@ func nextFeedUpdatedAt(previous int64) int64 {
 	return now
 }
 
-func (s *ControlPlaneService) buildFeedNodes(m model.SubscriptionFeed) ([]feed.ExportNode, error) {
+func (s *ControlPlaneService) buildFeedNodes(m model.SubscriptionFeed, relayToken string) ([]feed.ExportNode, error) {
+	if m.RelayEnabled && (!m.RelayTLS || strings.TrimSpace(m.RelayServerName) == "") {
+		return nil, invalidArg("relay feeds require TLS and relay_server_name; edit this Feed before using relay")
+	}
 	allowedSubs := map[string]struct{}{}
 	if m.SubscriptionIDsJSON != "" {
 		ids, err := decodeFeedFormats(m.SubscriptionIDsJSON)
@@ -517,7 +541,7 @@ func (s *ControlPlaneService) buildFeedNodes(m model.SubscriptionFeed) ([]feed.E
 		return items[i].Tag < items[j].Tag
 	})
 	if m.RelayEnabled {
-		return s.buildRelayFeedNodes(m, plat.Name, len(items) > 0)
+		return s.buildRelayFeedNodes(m, plat.Name, len(items) > 0, relayToken)
 	}
 	return items, nil
 }
@@ -526,13 +550,12 @@ func (s *ControlPlaneService) buildFeedNodes(m model.SubscriptionFeed) ([]feed.E
 // single public SOCKS5 endpoint. Resin receives the client connection and
 // routes it through the selected platform, so internal names such as
 // "warp" never need to be resolvable by the client device.
-func (s *ControlPlaneService) buildRelayFeedNodes(m model.SubscriptionFeed, platformName string, hasNodes bool) ([]feed.ExportNode, error) {
+func (s *ControlPlaneService) buildRelayFeedNodes(m model.SubscriptionFeed, platformName string, hasNodes bool, relayToken string) ([]feed.ExportNode, error) {
 	if !hasNodes {
 		return []feed.ExportNode{}, nil
 	}
-	password := ""
-	if s.EnvCfg != nil {
-		password = s.EnvCfg.ProxyToken
+	if !m.RelayTLS || strings.TrimSpace(m.RelayServerName) == "" {
+		return nil, invalidArg("relay feeds require TLS and relay_server_name; edit this Feed before using relay")
 	}
 	object := map[string]any{
 		"type":        "socks",
@@ -542,8 +565,8 @@ func (s *ControlPlaneService) buildRelayFeedNodes(m model.SubscriptionFeed, plat
 		"version":     "5",
 		"username":    platformName,
 	}
-	if password != "" {
-		object["password"] = password
+	if relayToken = strings.TrimSpace(relayToken); relayToken != "" {
+		object["password"] = relayToken
 	}
 	if m.RelayTLS {
 		serverName := strings.TrimSpace(m.RelayServerName)
@@ -655,8 +678,12 @@ func (s *ControlPlaneService) resolveFeedTag(entry *node.NodeEntry, h node.Hash,
 	return best.name + "/" + best.tag
 }
 
-func (s *ControlPlaneService) renderFeed(m model.SubscriptionFeed, format feed.Format) (feed.ExportResult, string, error) {
-	cacheKey := m.ID + ":" + string(format)
+func (s *ControlPlaneService) renderFeed(m model.SubscriptionFeed, format feed.Format, relayToken string) (feed.ExportResult, string, error) {
+	cacheScope := "preview"
+	if strings.TrimSpace(relayToken) != "" {
+		cacheScope = "public"
+	}
+	cacheKey := m.ID + ":" + string(format) + ":" + cacheScope
 	flightKey := cacheKey + ":" + strconv.FormatInt(m.UpdatedAtNs, 10)
 	if cached, ok := s.feedCacheEntry(cacheKey, m.UpdatedAtNs); ok {
 		return cached.Result, cached.ETag, nil
@@ -667,7 +694,7 @@ func (s *ControlPlaneService) renderFeed(m model.SubscriptionFeed, format feed.F
 		if cached, ok := s.feedCacheEntry(cacheKey, m.UpdatedAtNs); ok {
 			return cached, nil
 		}
-		nodes, err := s.buildFeedNodes(m)
+		nodes, err := s.buildFeedNodes(m, relayToken)
 		if err != nil {
 			return nil, err
 		}
@@ -731,8 +758,61 @@ func (s *ControlPlaneService) RenderFeed(token, requested string) (model.Subscri
 	if !enabled {
 		return model.SubscriptionFeed{}, feed.ExportResult{}, "", notFound("feed format not found")
 	}
-	result, etag, err := s.renderFeed(*m, feed.Format(format))
+	result, etag, err := s.renderFeed(*m, feed.Format(format), token)
 	return *m, result, etag, err
+}
+
+// ResolveRelayCredential validates a Feed token used as a scoped SOCKS5
+// credential and returns the endpoint/lifecycle scope bound to that Feed. The
+// caller must not trust a platform name supplied by the SOCKS5 client: the
+// Feed configuration is the authorization boundary.
+func (s *ControlPlaneService) ResolveRelayCredential(token string) (proxy.RelayCredential, bool) {
+	if s == nil || s.Engine == nil || s.Pool == nil {
+		return proxy.RelayCredential{}, false
+	}
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return proxy.RelayCredential{}, false
+	}
+	tokenHash := feed.HashToken(token)
+	// Keep the database lookup and revocation-channel lookup under the same
+	// mutex. Otherwise an update could commit between these two operations and
+	// a stale resolver result could create a fresh, unrevoked channel.
+	s.relayMu.Lock()
+	defer s.relayMu.Unlock()
+	m, err := s.Engine.FindEnabledByTokenHash(tokenHash)
+	if err != nil || m == nil || !m.RelayEnabled || !m.RelayTLS || strings.TrimSpace(m.RelayServerName) == "" || strings.TrimSpace(m.PlatformID) == "" || m.RelayPort < 1 || m.RelayPort > 65535 {
+		return proxy.RelayCredential{}, false
+	}
+	plat, ok := s.Pool.GetPlatform(m.PlatformID)
+	if !ok || plat == nil || strings.TrimSpace(plat.Name) == "" {
+		return proxy.RelayCredential{}, false
+	}
+
+	if s.relayRevocations == nil {
+		s.relayRevocations = make(map[string]chan struct{})
+	}
+	revoked := s.relayRevocations[tokenHash]
+	if revoked == nil {
+		revoked = make(chan struct{})
+		s.relayRevocations[tokenHash] = revoked
+	}
+	return proxy.RelayCredential{
+		PlatformName: strings.TrimSpace(plat.Name),
+		RelayPort:    m.RelayPort,
+		RequireTLS:   true,
+		Revoked:      revoked,
+	}, true
+}
+
+func (s *ControlPlaneService) revokeRelayCredentialLocked(tokenHash string) {
+	if strings.TrimSpace(tokenHash) == "" || s.relayRevocations == nil {
+		return
+	}
+	if revoked := s.relayRevocations[tokenHash]; revoked != nil {
+		close(revoked)
+		delete(s.relayRevocations, tokenHash)
+	}
 }
 
 func (s *ControlPlaneService) PreviewFeed(id, format string) (*FeedPreview, error) {
@@ -755,7 +835,7 @@ func (s *ControlPlaneService) PreviewFeed(id, format string) (*FeedPreview, erro
 	if !enabled {
 		return nil, notFound("feed format not found")
 	}
-	result, _, err := s.renderFeed(*m, feed.Format(format))
+	result, _, err := s.renderFeed(*m, feed.Format(format), "")
 	if err != nil {
 		return nil, err
 	}

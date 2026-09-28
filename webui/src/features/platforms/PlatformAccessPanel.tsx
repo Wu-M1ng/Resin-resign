@@ -225,7 +225,7 @@ export function PlatformAccessPanel({ platformName }: PlatformAccessPanelProps) 
   });
 
   const env = envQuery.data;
-  const proxyTokenSet = env?.proxy_token_set ?? true;
+  const proxyTokenConfigured = env?.proxy_token_set ?? true;
   const endpoint = currentProxyEndpoint(env?.resin_port ?? 2260);
   const host = endpoint.host;
   const scheme = endpoint.scheme;
@@ -249,7 +249,7 @@ export function PlatformAccessPanel({ platformName }: PlatformAccessPanelProps) 
   const urls = useMemo(() => {
     const platform = platformName.trim() || "Default";
     const acc = account.trim();
-    const tokenRaw = proxyTokenSet ? token.trim() : "";
+    const tokenRaw = token.trim();
     const sep = ".";
 
     // Raw identity/credential are used verbatim for the curl -U value.
@@ -258,8 +258,9 @@ export function PlatformAccessPanel({ platformName }: PlatformAccessPanelProps) 
     const identityEnc = acc
       ? `${encodeSegment(platform)}${sep}${encodeSegment(acc)}`
       : encodeSegment(platform);
-    // forward token: literal placeholder only when auth is enabled but unset.
-    const forwardToken = tokenRaw || (proxyTokenSet ? TOKEN_PLACEHOLDER : "");
+    // Production endpoints always require a token. Keep a visible placeholder
+    // until the administrator enters the configured value.
+    const forwardToken = tokenRaw || TOKEN_PLACEHOLDER;
 
     const forwardCredential = forwardToken ? `${identityRaw}:${forwardToken}` : identityRaw;
     const userInfo = forwardToken ? `${identityEnc}:${encodeSegment(forwardToken)}` : identityEnc;
@@ -278,7 +279,7 @@ export function PlatformAccessPanel({ platformName }: PlatformAccessPanelProps) 
     const externalHttp = externalAddress ? `http://${userInfo}@${externalAddress}` : "";
     const externalSocks = externalAddress ? `socks5://${userInfo}@${externalAddress}` : "";
 
-    const reverseTokenSeg = proxyTokenSet ? encodeSegment(tokenRaw || TOKEN_PLACEHOLDER) : "";
+    const reverseTokenSeg = encodeSegment(tokenRaw || TOKEN_PLACEHOLDER);
     const parsed = parseTarget(target);
     const reverseUrl = parsed
       ? `${scheme}://${host}/${reverseTokenSeg}/${identityEnc}/${parsed.protocol}/${parsed.rest}`
@@ -304,12 +305,12 @@ export function PlatformAccessPanel({ platformName }: PlatformAccessPanelProps) 
       curlForward,
       curlReverse,
     };
-  }, [platformName, account, token, proxyTokenSet, host, scheme, target, externalHost, externalPortForDisplay]);
+  }, [platformName, account, token, host, scheme, target, externalHost, externalPortForDisplay]);
 
   const copyLabel = t("复制");
   const copiedLabel = t("已复制");
-  const tokenMissing = proxyTokenSet && !token.trim();
-  const tokenInputValue = proxyTokenSet ? token : "";
+  const tokenMissing = !token.trim();
+  const tokenInputValue = token;
 
   return (
     <section className="platform-detail-tabpanel platform-access-section">
@@ -346,16 +347,13 @@ export function PlatformAccessPanel({ platformName }: PlatformAccessPanelProps) 
           <Input
             id="access-token"
             type="password"
-            placeholder={proxyTokenSet ? t("填写 RESIN_PROXY_TOKEN") : t("当前代理免认证，无需填写")}
+            placeholder={proxyTokenConfigured ? t("填写 RESIN_PROXY_TOKEN") : t("请先配置非空 RESIN_PROXY_TOKEN")}
             value={tokenInputValue}
-            onChange={(event) => {
-              if (proxyTokenSet) {
-                handleTokenChange(event.target.value);
-              }
-            }}
-            disabled={!proxyTokenSet}
+            onChange={(event) => handleTokenChange(event.target.value)}
+            disabled={false}
             autoComplete="off"
           />
+          {!proxyTokenConfigured ? <p className="muted" style={{ marginTop: 4, fontSize: 12 }}>{t("后端未配置非空代理 token，代理请求会被拒绝")}</p> : null}
           {tokenMissing ? (
             <p className="muted" style={{ marginTop: 4, fontSize: 12 }}>
               {t("尚未填写 token，地址中将以 <token> 占位，请替换为实际值。")}

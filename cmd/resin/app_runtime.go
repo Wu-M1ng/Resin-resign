@@ -414,6 +414,7 @@ func (a *resinApp) buildNetworkServers(engine *state.StateEngine) error {
 
 	forwardProxy := proxy.NewForwardProxy(proxy.ForwardProxyConfig{
 		ProxyToken:        a.envCfg.ProxyToken,
+		RequireProxyToken: true,
 		Router:            a.topoRuntime.router,
 		Pool:              a.topoRuntime.pool,
 		Health:            a.topoRuntime.pool,
@@ -426,6 +427,7 @@ func (a *resinApp) buildNetworkServers(engine *state.StateEngine) error {
 
 	reverseProxy := proxy.NewReverseProxy(proxy.ReverseProxyConfig{
 		ProxyToken:        a.envCfg.ProxyToken,
+		RequireProxyToken: true,
 		Router:            a.topoRuntime.router,
 		Pool:              a.topoRuntime.pool,
 		PlatformLookup:    a.topoRuntime.pool,
@@ -438,13 +440,14 @@ func (a *resinApp) buildNetworkServers(engine *state.StateEngine) error {
 		ProxyBypassRules:  a.envCfg.ProxyBypassRules,
 	})
 	socks5Inbound := proxy.NewSocks5Inbound(proxy.Socks5InboundConfig{
-		ProxyToken:       a.envCfg.ProxyToken,
-		Router:           a.topoRuntime.router,
-		Pool:             a.topoRuntime.pool,
-		Health:           a.topoRuntime.pool,
-		Events:           proxyEvents,
-		MetricsSink:      a.metricsManager,
-		ProxyBypassRules: a.envCfg.ProxyBypassRules,
+		ProxyToken:              a.envCfg.ProxyToken,
+		RelayCredentialResolver: cpService.ResolveRelayCredential,
+		Router:                  a.topoRuntime.router,
+		Pool:                    a.topoRuntime.pool,
+		Health:                  a.topoRuntime.pool,
+		Events:                  proxyEvents,
+		MetricsSink:             a.metricsManager,
+		ProxyBypassRules:        a.envCfg.ProxyBypassRules,
 	})
 
 	endpointManager := newEndpointRuntimeManager(

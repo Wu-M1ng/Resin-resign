@@ -312,5 +312,10 @@ func (g *endpointSocksGate) ServeConnContext(ctx context.Context, conn net.Conn)
 	ctx = proxy.ContextWithInboundPolicy(ctx, proxy.InboundPolicy{
 		RequireProxyAuthInfo: endpoint.RequireProxyAuthInfo,
 	})
+	ctx = proxy.ContextWithInboundEndpoint(ctx, proxy.InboundEndpoint{
+		ID:         endpoint.ID,
+		Port:       endpoint.Port,
+		TLSEnabled: endpoint.TLSEnabled,
+	})
 	g.next.ServeConnContext(ctx, conn)
 }

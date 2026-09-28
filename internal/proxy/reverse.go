@@ -24,6 +24,7 @@ type PlatformLookup interface {
 // ReverseProxyConfig holds dependencies for the reverse proxy.
 type ReverseProxyConfig struct {
 	ProxyToken        string
+	RequireProxyToken bool
 	Router            *routing.Router
 	Pool              outbound.PoolAccessor
 	PlatformLookup    PlatformLookup
@@ -39,6 +40,7 @@ type ReverseProxyConfig struct {
 // ReverseProxy implements an HTTP reverse proxy.
 type ReverseProxy struct {
 	token             string
+	requireProxyToken bool
 	router            *routing.Router
 	pool              outbound.PoolAccessor
 	platLook          PlatformLookup
@@ -66,17 +68,18 @@ func NewReverseProxy(cfg ReverseProxyConfig) *ReverseProxy {
 		transportPool = NewOutboundTransportPool(transportCfg)
 	}
 	return &ReverseProxy{
-		token:           cfg.ProxyToken,
-		router:          cfg.Router,
-		pool:            cfg.Pool,
-		platLook:        cfg.PlatformLookup,
-		health:          cfg.Health,
-		matcher:         cfg.Matcher,
-		events:          ev,
-		metricsSink:     cfg.MetricsSink,
-		transportConfig: transportCfg,
-		transportPool:   transportPool,
-		bypass:          NewTargetBypassMatcher(cfg.ProxyBypassRules),
+		token:             cfg.ProxyToken,
+		requireProxyToken: cfg.RequireProxyToken,
+		router:            cfg.Router,
+		pool:              cfg.Pool,
+		platLook:          cfg.PlatformLookup,
+		health:            cfg.Health,
+		matcher:           cfg.Matcher,
+		events:            ev,
+		metricsSink:       cfg.MetricsSink,
+		transportConfig:   transportCfg,
+		transportPool:     transportPool,
+		bypass:            NewTargetBypassMatcher(cfg.ProxyBypassRules),
 	}
 }
 
@@ -165,6 +168,9 @@ func (p *ReverseProxy) parsePathV1(rawPath string) (*parsedPath, *ProxyError) {
 	token, perr := decodePathSegmentV1(segments[0])
 	if perr != nil {
 		return nil, perr
+	}
+	if p.requireProxyToken && p.token == "" {
+		return nil, ErrAuthRequired
 	}
 	if p.token != "" && token != p.token {
 		return nil, ErrAuthFailed

@@ -21,7 +21,7 @@ func NewTokenActionHandler(proxyToken string, cp *service.ControlPlaneService, a
 	mux := http.NewServeMux()
 	mux.Handle("POST /{token}/api/v1/{platform}/actions/inherit-lease", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := PathParam(r, "token")
-		if proxyToken != "" && token != proxyToken {
+		if proxyToken == "" || token != proxyToken {
 			http.NotFound(w, r)
 			return
 		}

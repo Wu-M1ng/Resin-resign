@@ -18,6 +18,7 @@ import (
 // ForwardProxyConfig holds dependencies for the forward proxy.
 type ForwardProxyConfig struct {
 	ProxyToken        string
+	RequireProxyToken bool
 	Router            *routing.Router
 	Pool              outbound.PoolAccessor
 	Health            HealthRecorder
@@ -32,6 +33,7 @@ type ForwardProxyConfig struct {
 // authentication, HTTP request forwarding, and CONNECT tunneling.
 type ForwardProxy struct {
 	token             string
+	requireProxyToken bool
 	router            *routing.Router
 	pool              outbound.PoolAccessor
 	health            HealthRecorder
@@ -57,15 +59,16 @@ func NewForwardProxy(cfg ForwardProxyConfig) *ForwardProxy {
 		transportPool = NewOutboundTransportPool(transportCfg)
 	}
 	return &ForwardProxy{
-		token:           cfg.ProxyToken,
-		router:          cfg.Router,
-		pool:            cfg.Pool,
-		health:          cfg.Health,
-		events:          ev,
-		metricsSink:     cfg.MetricsSink,
-		transportConfig: transportCfg,
-		transportPool:   transportPool,
-		bypass:          NewTargetBypassMatcher(cfg.ProxyBypassRules),
+		token:             cfg.ProxyToken,
+		requireProxyToken: cfg.RequireProxyToken,
+		router:            cfg.Router,
+		pool:              cfg.Pool,
+		health:            cfg.Health,
+		events:            ev,
+		metricsSink:       cfg.MetricsSink,
+		transportConfig:   transportCfg,
+		transportPool:     transportPool,
+		bypass:            NewTargetBypassMatcher(cfg.ProxyBypassRules),
 	}
 }
 
@@ -101,6 +104,9 @@ func (p *ForwardProxy) authenticate(r *http.Request) (string, string, *ProxyErro
 func (p *ForwardProxy) authenticateV1(r *http.Request) (string, string, *ProxyError) {
 	auth := r.Header.Get("Proxy-Authorization")
 	if p.token == "" {
+		if p.requireProxyToken {
+			return "", "", ErrAuthRequired
+		}
 		credential, ok := parseProxyAuthorizationCredentialV1(auth)
 		if !ok {
 			if requireProxyAuthInfo(r) {

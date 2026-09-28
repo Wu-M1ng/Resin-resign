@@ -252,7 +252,7 @@ func TestLoadEnvConfig_MissingProxyToken(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for missing RESIN_PROXY_TOKEN")
 	}
-	assertContains(t, err.Error(), "RESIN_PROXY_TOKEN must be defined. If you intend to use an empty token, please set it explicitly (e.g., RESIN_PROXY_TOKEN=).")
+	assertContains(t, err.Error(), "RESIN_PROXY_TOKEN must be defined. Set a non-empty random value for proxy access; an explicit empty value disables production proxy endpoints.")
 }
 
 func TestLoadEnvConfig_MissingAuthVersion(t *testing.T) {

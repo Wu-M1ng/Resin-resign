@@ -182,3 +182,15 @@ func TestTokenActionInheritLease_InvalidArguments(t *testing.T) {
 	}
 	assertErrorCode(t, rec, "INVALID_ARGUMENT")
 }
+
+func TestTokenActionInheritLease_EmptyProxyTokenIsDisabled(t *testing.T) {
+	_, cp, _ := newControlPlaneTestServer(t)
+	handler := NewTokenActionHandler("", cp, 1<<20)
+	rec := doTokenJSONRequest(t, handler, http.MethodPost, "/any/api/v1/Default/actions/inherit-lease", map[string]any{
+		"parent_account": "parent",
+		"new_account":    "child",
+	})
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status: got %d, want %d", rec.Code, http.StatusNotFound)
+	}
+}

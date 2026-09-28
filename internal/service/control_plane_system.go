@@ -63,9 +63,11 @@ type ControlPlaneService struct {
 	EnvCfg          *config.EnvConfig
 	EndpointRuntime EndpointRuntime
 
-	feedMu     sync.Mutex
-	feedCache  map[string]feedRenderCacheEntry
-	feedFlight singleflight.Group
+	feedMu           sync.Mutex
+	feedCache        map[string]feedRenderCacheEntry
+	feedFlight       singleflight.Group
+	relayMu          sync.Mutex
+	relayRevocations map[string]chan struct{}
 
 	configMu      sync.Mutex
 	configVersion int

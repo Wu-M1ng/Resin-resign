@@ -118,7 +118,7 @@ See the following sections for client access modes. In common scenarios, you can
 If you just need a high-performance, large-capacity proxy pool with automatic health management, Resin works out of the box.
 
 Once Resin is running, you can choose HTTP forward proxy, SOCKS5 forward proxy, or reverse proxy based on what your client supports.
-If you do not want a proxy password, explicitly set `RESIN_PROXY_TOKEN=""` (the variable must still be defined). Then HTTP forward proxy is available at `http://127.0.0.1:2260`, and SOCKS5 forward proxy is available at `socks5://127.0.0.1:2260`.
+For production, set `RESIN_PROXY_TOKEN` to a non-empty random value; HTTP forward, SOCKS5 forward, and reverse proxy endpoints require authentication. The variable must still be defined.
 For binary/source runs, Resin also loads a `.env` file from the current working directory before reading configuration. Environment variables already set by the OS or shell take precedence over `.env` values.
 
 HTTP forward proxy example:
@@ -137,7 +137,7 @@ curl --proxy socks5h://127.0.0.1:2260 \
   https://api.ipify.org
 ```
 
-When `RESIN_PROXY_TOKEN=""`, SOCKS5 also allows unauthenticated access.
+When `RESIN_PROXY_TOKEN` is empty, production proxy endpoints reject requests; use a non-empty random value.
 
 If your client supports overriding `BASE_URL`, you can also use reverse-proxy mode.
 URL format: `/token/Platform(optional).Account(optional)/protocol/target`.
@@ -370,11 +370,11 @@ RESIN_PORT=2260 \
 - **Q: How do I let LAN or localhost targets skip proxy nodes?**
   - **A**: Set `RESIN_PROXY_BYPASS` to a semicolon/comma/newline-separated rule list. Matching requests are dialed directly by Resin instead of through a proxy node. Example: `RESIN_PROXY_BYPASS="localhost;127.*;10.*;172.16.0.0/12;192.168.*;<local>"`. Supported rules include exact hosts, `*`/`?` wildcards, CIDR ranges, and `<local>` for hostnames without dots.
 - **Q: Startup fails with `RESIN_PROXY_TOKEN` undefined?**
-  - **A**: Even if you do not want a proxy password, you must explicitly set it to empty: `RESIN_PROXY_TOKEN=""`. On shells that drop empty environment variables, create a `.env` file with `RESIN_PROXY_TOKEN=`.
+  - **A**: `RESIN_PROXY_TOKEN` must be explicitly defined with a non-empty random value; an empty value does not open anonymous proxy access.
 - **Q: Why does Resin reject `RESIN_AUTH_VERSION=LEGACY_V0`?**
   - **A**: `LEGACY_V0` is no longer supported. Remove `RESIN_AUTH_VERSION` or set it to `V1`. If you are upgrading from a release that used legacy authentication, see the [v1.0.0 auth migration guide](doc/v1.0.0-migration-guide.md).
 - **Q: Why can't my SOCKS5 client connect?**
-  - **A**: If `RESIN_PROXY_TOKEN` is non-empty, the client must send SOCKS5 username/password authentication. If it is explicitly set to an empty string, `NO AUTH` is also allowed.
+  - **A**: The client must send SOCKS5 username/password authentication; an empty `RESIN_PROXY_TOKEN` does not enable `NO AUTH` on production endpoints.
 - **Q: How to write reverse-proxy paths for WebSocket (ws/wss)?**
   - **A**: In the URL path, the protocol field must still be `http` or `https` (not `ws`/`wss`). Resin auto-detects and handles WebSocket upgrade.
 

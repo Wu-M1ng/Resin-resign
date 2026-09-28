@@ -58,6 +58,7 @@ const EXACT_ZH_TO_EN: Record<string, string> = {
   "Resin 公网域名": "Resin public hostname",
   "Resin SOCKS5 端口": "Resin SOCKS5 port",
   "TLS SNI": "TLS SNI",
+  "TLS 加密（中转必需）": "TLS Encryption (required for relay)",
   "通常填写证书对应的域名": "Usually use the hostname covered by the certificate",
   "TLS SOCKS5 中转请使用 sing-box 或 Clash Meta；URI/V2Ray Base64 无法表达 TLS，会跳过该节点。":
     "Use sing-box or Clash Meta for TLS SOCKS5 relay; URI/V2Ray Base64 cannot represent TLS and will skip the node.",
@@ -400,13 +401,15 @@ Note: Once enabled, requests without authentication information are rejected ins
   "即后端 RESIN_PROXY_TOKEN。仅保存在浏览器本地，不会上传服务器。":
     "This is the backend RESIN_PROXY_TOKEN. Stored only in your browser, never uploaded.",
   "填写 RESIN_PROXY_TOKEN": "Enter RESIN_PROXY_TOKEN",
+  "请先配置非空 RESIN_PROXY_TOKEN": "Configure a non-empty RESIN_PROXY_TOKEN first",
+  "后端未配置非空代理 token，代理请求会被拒绝": "The backend has no non-empty proxy token; proxy requests will be rejected",
   "当前代理免认证，可留空": "Proxy is unauthenticated; can be left empty",
   "当前代理免认证，无需填写": "Proxy is unauthenticated; no token required",
   "尚未填写 token，地址中将以 <token> 占位，请替换为实际值。":
     "Token not set; URLs use <token> as a placeholder — replace it with the real value.",
   "代理免认证": "No-auth proxy",
-  "后端 RESIN_PROXY_TOKEN 为空，正/反向代理无需认证。":
-    "Backend RESIN_PROXY_TOKEN is empty; forward/reverse proxy require no authentication.",
+  "后端 RESIN_PROXY_TOKEN 为空，生产代理请求会被拒绝。":
+    "Backend RESIN_PROXY_TOKEN is empty; production proxy requests are rejected.",
   "curl 示例": "curl example",
   "目标网址": "Target URL",
   "例如 https://api.ipify.org": "e.g. https://api.ipify.org",
@@ -488,7 +491,7 @@ Note: Once enabled, requests without authentication information are rejected ins
   "刚刚": "Just now",
   "0 秒": "0s",
   "RESIN_ADMIN_TOKEN 为空，控制面 API 免认证": "RESIN_ADMIN_TOKEN is empty, control-plane API is unauthenticated",
-  "RESIN_PROXY_TOKEN 为空，正/反向代理免认证": "RESIN_PROXY_TOKEN is empty, forward/reverse proxy is unauthenticated",
+  "RESIN_PROXY_TOKEN 为空，生产代理请求会被拒绝": "RESIN_PROXY_TOKEN is empty; production proxy requests are rejected",
   "RESIN_ADMIN_TOKEN 强度较弱，建议更换为更高熵随机令牌":
     "RESIN_ADMIN_TOKEN is weak, use a higher-entropy random token",
   "RESIN_PROXY_TOKEN 强度较弱，建议更换为更高熵随机令牌":

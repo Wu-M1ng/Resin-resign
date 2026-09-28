@@ -43,7 +43,7 @@ const DEFAULT_FORM: FeedInput = {
   relay_enabled: false,
   relay_host: "",
   relay_port: 2261,
-  relay_tls: false,
+  relay_tls: true,
   relay_server_name: "",
   default_format: "clash-meta",
   enabled_formats: ["clash-meta", "singbox", "v2ray-base64", "uri"],
@@ -64,7 +64,7 @@ function toForm(feed: SubscriptionFeed): FeedInput {
     relay_enabled: feed.relay_enabled,
     relay_host: feed.relay_host,
     relay_port: feed.relay_port || 2261,
-    relay_tls: feed.relay_tls,
+    relay_tls: feed.relay_enabled ? true : feed.relay_tls,
     relay_server_name: feed.relay_server_name,
     default_format: feed.default_format,
     enabled_formats: feed.enabled_formats,
@@ -176,6 +176,7 @@ export function FeedsPage() {
       platform_id: mode === "platform" ? current.platform_id : "",
       subscription_ids: mode === "subscriptions" ? current.subscription_ids : [],
       relay_enabled: mode === "platform" ? current.relay_enabled : false,
+      relay_tls: mode === "platform" ? true : false,
     }));
   };
   const toggleFormat = (format: FeedFormat) => {
@@ -213,6 +214,7 @@ export function FeedsPage() {
       platform_id: platformID,
       subscription_ids: subscriptionIDs,
       relay_host: form.relay_host.trim(),
+      relay_tls: form.relay_enabled,
       relay_server_name: form.relay_server_name.trim() || form.relay_host.trim(),
     };
     if (editing) {
@@ -299,11 +301,11 @@ export function FeedsPage() {
           <div className="field-group field-span-2"><span className="field-label">{t("节点来源")}</span><p className="muted">{t("平台和原始订阅来源二选一")}</p><div className="feeds-source-modes"><label className="feeds-source-mode"><input type="radio" name="feed-source-mode" checked={sourceMode === "platform"} onChange={() => chooseSourceMode("platform")} /><span>{t("节点平台")}</span></label><label className="feeds-source-mode"><input type="radio" name="feed-source-mode" checked={sourceMode === "subscriptions"} onChange={() => chooseSourceMode("subscriptions")} /><span>{t("原始订阅来源")}</span></label></div></div>
           {sourceMode === "platform" ? <div className="field-group field-span-2"><label className="field-label" htmlFor="feed-platform">{t("节点平台")}</label><Select id="feed-platform" value={form.platform_id} onChange={(event) => setForm({ ...form, platform_id: event.target.value })}><option value="">{t("请选择平台")}</option>{platforms.map((platform) => <option key={platform.id} value={platform.id}>{platform.name} ({platform.routable_node_count})</option>)}</Select>{selectedPlatform ? <p className="muted">{t("当前平台有 {{count}} 个可路由节点", { count: selectedPlatform.routable_node_count })}</p> : null}</div> : <div className="field-group field-span-2"><span className="field-label">{t("原始订阅来源")}</span><p className="muted">{t("选择一个或多个已启用的原始订阅")}</p><div className="feeds-format-checks">{subscriptions.map((subscription) => <label key={subscription.id} className="feeds-format-check"><input type="checkbox" checked={form.subscription_ids.includes(subscription.id)} onChange={() => toggleSubscription(subscription.id)} /><span>{subscription.name}</span></label>)}</div></div>}
           {sourceMode === "platform" ? <>
-            <div className="feeds-switch-grid field-span-2"><label className="feeds-switch-item"><span>{t("通过 Resin 中转")}</span><Switch checked={form.relay_enabled} onChange={(event) => setForm({ ...form, relay_enabled: event.target.checked })} /></label></div>
+            <div className="feeds-switch-grid field-span-2"><label className="feeds-switch-item"><span>{t("通过 Resin 中转")}</span><Switch checked={form.relay_enabled} onChange={(event) => setForm({ ...form, relay_enabled: event.target.checked, relay_tls: event.target.checked })} /></label></div>
             {form.relay_enabled ? <>
               <div className="field-group"><label className="field-label" htmlFor="feed-relay-host">{t("Resin 公网域名")}</label><Input id="feed-relay-host" value={form.relay_host} onChange={(event) => setForm({ ...form, relay_host: event.target.value })} placeholder="resin.example.com" /></div>
               <div className="field-group"><label className="field-label" htmlFor="feed-relay-port">{t("Resin SOCKS5 端口")}</label><Input id="feed-relay-port" type="number" min={1} max={65535} value={form.relay_port} onChange={(event) => setForm({ ...form, relay_port: Number(event.target.value) || 0 })} placeholder="2261" /></div>
-              <div className="feeds-switch-grid field-span-2"><label className="feeds-switch-item"><span>{t("TLS 加密")}</span><Switch checked={form.relay_tls} onChange={(event) => setForm({ ...form, relay_tls: event.target.checked })} /></label></div>
+              <div className="feeds-switch-grid field-span-2"><label className="feeds-switch-item"><span>{t("TLS 加密（中转必需）")}</span><Switch checked={true} disabled /></label></div>
               {form.relay_tls ? <div className="field-group field-span-2"><label className="field-label" htmlFor="feed-relay-server-name">{t("TLS SNI")}</label><Input id="feed-relay-server-name" value={form.relay_server_name} onChange={(event) => setForm({ ...form, relay_server_name: event.target.value })} placeholder="resin.example.com" /><p className="muted">{t("通常填写证书对应的域名")}</p></div> : null}
               {form.relay_tls ? <p className="muted field-span-2">{t("TLS SOCKS5 中转请使用 sing-box 或 Clash Meta；URI/V2Ray Base64 无法表达 TLS，会跳过该节点。")}</p> : null}
               <p className="muted field-span-2">{t("客户端连接公网入口，Resin 再转发到该平台内的节点；请确保此端口启用了 SOCKS5。")}</p>

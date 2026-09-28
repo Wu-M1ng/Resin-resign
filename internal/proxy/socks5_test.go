@@ -51,6 +51,34 @@ func socks5UserPassPacket(username, password string) []byte {
 	return buf
 }
 
+func authenticateSocks5UserPass(t *testing.T, inbound *Socks5Inbound, username, password string) (string, string, bool, []byte) {
+	return authenticateSocks5UserPassAt(t, inbound, username, password, InboundEndpoint{Port: 2261, TLSEnabled: true})
+}
+
+func authenticateSocks5UserPassAt(t *testing.T, inbound *Socks5Inbound, username, password string, endpoint InboundEndpoint) (string, string, bool, []byte) {
+	t.Helper()
+
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+
+	type result struct {
+		platform string
+		account  string
+		ok       bool
+	}
+	resultCh := make(chan result, 1)
+	go func() {
+		resultPlatform, resultAccount, _, resultOK := inbound.authenticateUserPassWithEndpoint(serverConn, bufio.NewReader(serverConn), false, endpoint, true)
+		resultCh <- result{platform: resultPlatform, account: resultAccount, ok: resultOK}
+	}()
+
+	writeAll(t, clientConn, socks5UserPassPacket(username, password))
+	reply := readExactly(t, clientConn, 2)
+	got := <-resultCh
+	return got.platform, got.account, got.ok, reply
+}
+
 func socks5ConnectIPv4Packet(addr string) []byte {
 	host, portStr, err := net.SplitHostPort(addr)
 	if err != nil {
@@ -99,6 +127,23 @@ func TestSocks5Inbound_EmptyTokenFallsBackToNoAuth(t *testing.T) {
 		t.Fatalf("selected method: got %d, want %d", reply[1], socks5MethodNoAuth)
 	}
 
+	_ = clientConn.Close()
+	<-done
+}
+
+func TestSocks5Inbound_ResolverForcesUserPassWhenGlobalTokenEmpty(t *testing.T) {
+	inbound := NewSocks5Inbound(Socks5InboundConfig{
+		RelayCredentialResolver: func(token string) (RelayCredential, bool) {
+			return RelayCredential{}, false
+		},
+	})
+	clientConn, reader, done := startSocks5Session(t, inbound)
+	defer clientConn.Close()
+
+	writeAll(t, clientConn, []byte{socks5Version, 2, socks5MethodNoAuth, socks5MethodUserPass})
+	if reply := readExactly(t, reader, 2); reply[1] != socks5MethodUserPass {
+		t.Fatalf("selected method: got %d, want %d", reply[1], socks5MethodUserPass)
+	}
 	_ = clientConn.Close()
 	<-done
 }
@@ -203,6 +248,90 @@ func TestSocks5Inbound_UserPassAuthFailureUsesRFC1929Failure(t *testing.T) {
 	case ev := <-emitter.logCh:
 		t.Fatalf("unexpected request log event on auth failure: %+v", ev)
 	case <-time.After(100 * time.Millisecond):
+	}
+}
+
+func TestSocks5Inbound_ScopedFeedTokenUsesResolvedPlatform(t *testing.T) {
+	inbound := NewSocks5Inbound(Socks5InboundConfig{
+		ProxyToken: "global-proxy-token",
+		RelayCredentialResolver: func(token string) (RelayCredential, bool) {
+			if token == "feed-token" {
+				return RelayCredential{PlatformName: "Bound platform", RelayPort: 2261, RequireTLS: true, Revoked: make(chan struct{})}, true
+			}
+			return RelayCredential{}, false
+		},
+	})
+
+	platform, account, ok, reply := authenticateSocks5UserPass(t, inbound, "Forged platform:account", "feed-token")
+	if reply[0] != socks5UserPassVersion || reply[1] != socks5UserPassStatusSuccess {
+		t.Fatalf("auth reply: got %v, want success", reply)
+	}
+	if !ok {
+		t.Fatal("scoped Feed token was rejected")
+	}
+	if platform != "Bound platform" {
+		t.Fatalf("platform: got %q, want resolved platform", platform)
+	}
+	if account != "account" {
+		t.Fatalf("account: got %q, want account suffix", account)
+	}
+}
+
+func TestSocks5Inbound_UnknownScopedFeedTokenIsRejected(t *testing.T) {
+	inbound := NewSocks5Inbound(Socks5InboundConfig{
+		ProxyToken: "global-proxy-token",
+		RelayCredentialResolver: func(token string) (RelayCredential, bool) {
+			if token == "known-feed-token" {
+				return RelayCredential{PlatformName: "Bound platform", RelayPort: 2261, RequireTLS: true, Revoked: make(chan struct{})}, true
+			}
+			return RelayCredential{}, false
+		},
+	})
+
+	platform, account, ok, reply := authenticateSocks5UserPass(t, inbound, "Bound platform", "unknown-feed-token")
+	if reply[0] != socks5UserPassVersion || reply[1] != socks5UserPassStatusFailure {
+		t.Fatalf("auth reply: got %v, want failure", reply)
+	}
+	if ok || platform != "" || account != "" {
+		t.Fatalf("unknown scoped token result: platform=%q account=%q ok=%v", platform, account, ok)
+	}
+}
+
+func TestSocks5Inbound_ScopedFeedTokenRequiresBoundTLSEndpoint(t *testing.T) {
+	inbound := NewSocks5Inbound(Socks5InboundConfig{
+		RelayCredentialResolver: func(token string) (RelayCredential, bool) {
+			if token == "feed-token" {
+				return RelayCredential{PlatformName: "Bound platform", RelayPort: 2261, RequireTLS: true, Revoked: make(chan struct{})}, true
+			}
+			return RelayCredential{}, false
+		},
+	})
+	for _, endpoint := range []InboundEndpoint{
+		{Port: 2260, TLSEnabled: true},
+		{Port: 2261, TLSEnabled: false},
+	} {
+		_, _, ok, reply := authenticateSocks5UserPassAt(t, inbound, "Bound platform", "feed-token", endpoint)
+		if reply[1] != socks5UserPassStatusFailure || ok {
+			t.Fatalf("endpoint %+v accepted scoped credential: reply=%v ok=%v", endpoint, reply, ok)
+		}
+	}
+}
+
+func TestWatchRelayRevocationClosesClientConnection(t *testing.T) {
+	client, server := net.Pipe()
+	defer client.Close()
+	revoked := make(chan struct{})
+	ctx, stop := watchRelayRevocation(context.Background(), server, revoked)
+	defer stop()
+	close(revoked)
+	select {
+	case <-ctx.Done():
+	case <-time.After(time.Second):
+		t.Fatal("relay revocation did not cancel session context")
+	}
+	_ = client.SetWriteDeadline(time.Now().Add(time.Second))
+	if _, err := client.Write([]byte("probe")); err == nil {
+		t.Fatal("client connection remained writable after relay revocation")
 	}
 }
 

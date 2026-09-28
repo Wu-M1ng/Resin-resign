@@ -60,13 +60,13 @@
    * 所有接入点共享控制面、路由池、节点池、出站 transport pool、日志与指标组件，仅 listener 和入站能力策略彼此独立。
    * 每个接入点在 TCP 层按首字节分流：首字节为 `0x05` 时进入 SOCKS5；其余流量进入 HTTP 入口，再区分控制面 API、WebUI、HTTP 正向代理与反向代理。
    * `/healthz` 在所有接入点始终可用；关闭管理页面时，其他控制面 API 与 WebUI 路径返回 404。
-   * 接入点可随时配置“当系统未设定代理令牌时，也强制客户端发送代理认证信息”（默认关闭）。`RESIN_PROXY_TOKEN` 非空时始终执行令牌认证；为空且此选项启用时，HTTP 正向代理缺少可解析且非空的 Basic 用户名会返回 407，SOCKS5 仅接受 `0x02` 并要求用户名和密码均非空，但不校验密码内容。空令牌下，此选项只用于强制携带身份，不构成安全认证。当启用此选项，客户端发来空认证不再视为 Default 平台请求。
+   * 接入点仍可记录“要求代理认证信息”的策略；生产运行时 HTTP 正向、HTTP 反向和 SOCKS5 统一要求非空 `RESIN_PROXY_TOKEN`。空令牌不会开放匿名代理，而是拒绝代理请求；`RequireProxyAuthInfo` 只额外收紧自定义接入点的凭据格式。
 4. HTTP 正向代理：
    * 格式：`Proxy-Authorization: Basic Platform.Account:PROXY_TOKEN`（user=Platform.Account，pass=PROXY_TOKEN）；解析时先按最右侧 `:` 切 Token，再对左侧身份串按第一个出现的 `.` 或 `:` 切 `Platform` 与 `Account`。
 5. SOCKS5 正向代理：
    * 仅支持 SOCKS5 `CONNECT`；成功后进入原始双向 TCP 隧道。
    * `RESIN_PROXY_TOKEN` 非空时，仅接受 RFC1929 用户名密码认证（method `0x02`）：`username=<Platform.Account|Platform:Account>`，`password=<PROXY_TOKEN>`。
-   * `RESIN_PROXY_TOKEN` 为空时，允许 `NO AUTH (0x00)`；若客户端同时提供 RFC1929 用户名密码认证，服务端优先选择该方法以提取 `Platform/Account` 身份，此时密码不做校验。
+   * 生产运行时即使 `RESIN_PROXY_TOKEN` 为空也不允许 `NO AUTH (0x00)`；代理请求会被拒绝。中转 Feed 使用独立的 Feed Token，并且只在绑定的 TLS 端口接受。
 6. 反向代理：
    * 路径：`/PROXY_TOKEN/Platform.Account/protocol/host/path?query`；身份段按第一个出现的 `.` 或 `:` 切分。
    * URL 身份段（`Platform.Account` / `Platform:Account`）接口定位为“简单使用 / 手动调试”；正式集成推荐通过请求头 `X-Resin-Account` 提供 Account。`X-Resin-Account` 的优先级高于 URL 身份段的 Account。
@@ -89,7 +89,7 @@ SOCKS5 用户名密码认证例子（V1）：
 | `0x02` | `Nimbus` | `resin-123456` | `resin-123456` | `Nimbus` | 空 |
 | `0x02` | `MyHub.bEA:234` | `resin-123456` | `resin-123456` | `MyHub` | `bEA:234` |
 
-当 `RESIN_PROXY_TOKEN=""` 时，SOCKS5 还允许 `NO AUTH (0x00)`。此时若客户端不发送用户名密码，则 `Platform/Account` 均为空，按 Default 平台 + 平台内随机路由处理。
+生产运行时 `RESIN_PROXY_TOKEN` 为空时，SOCKS5 不接受 `NO AUTH (0x00)`，代理请求会被拒绝。中转 Feed 的凭据还会绑定到配置的 TLS 端口，Feed 被修改、停用、轮换或删除时已有连接会被撤销。
 
 反向代理 URL 身份段例子（V1）：
 | 反向代理 URL | ProxyToken | Platform | Account |
@@ -1857,7 +1857,7 @@ Query（可选）：
 ### Proxy Token Actions（数据面运维）
 
 说明：以下接口不使用 `Authorization: Bearer` 控制面鉴权，而是通过路径中的 `proxy_token` 鉴权。  
-当 `RESIN_PROXY_TOKEN` 为空时，该接口仍可用：`proxy_token` 路径段不做值校验（例如 `/any-dummy-token/api/v1/...` 或 `//api/v1/...` 都可命中该接口）。
+当 `RESIN_PROXY_TOKEN` 为空时，该接口不可用；`proxy_token` 路径段不会路由到运维 Action，避免空令牌暴露写操作。
 
 #### 继承租约（Action）
 
@@ -2351,8 +2351,8 @@ GeoIP 与订阅的下载都有错误重试的需求。
 * 启动时会先加载当前工作目录下的 `.env` 文件（文件不存在则忽略；格式错误则拒绝启动）；系统或 shell 已设置的环境变量优先于 `.env`。
 * `RESIN_AUTH_VERSION`：可选的认证解析版本。未设置或为空时默认 `V1`；非空时仅允许 `V1`。
 * `RESIN_ADMIN_TOKEN`：访问 WebAPI 的认证 Token。环境变量必须定义；允许为空字符串。为空时关闭控制面鉴权。
-* `RESIN_PROXY_TOKEN`：访问代理的认证 Token。环境变量必须定义；允许为空字符串。为空时关闭 HTTP 正向代理 / 反向代理鉴权，并使 SOCKS5 允许 `NO AUTH`；非空时不能取保留值 `api`、`healthz`、`ui`，不能包含 `.:|/\@?#%~`，且不能包含空格、tab、换行、回车。
-  * 对 SOCKS5 而言：当 Token 非空时，RFC1929 密码必须等于 `RESIN_PROXY_TOKEN`；当 Token 为空时，仍可通过 RFC1929 的 `username` 字段传递 `Platform/Account` 身份。
+* `RESIN_PROXY_TOKEN`：访问代理的认证 Token。环境变量必须定义；生产运行时应使用非空随机值，空值会拒绝 HTTP 正向、HTTP 反向和 SOCKS5 代理请求。非空时不能取保留值 `api`、`healthz`、`ui`，不能包含 `.:|/\@?#%~`，且不能包含空格、tab、换行、回车。
+  * 对普通 SOCKS5 而言，RFC1929 密码必须等于 `RESIN_PROXY_TOKEN`；通过 Resin 中转的 Feed 使用自己的随机 Token，并额外校验 TLS 和绑定端口。
 * 当 Token 非空但强度较弱时，WebUI 首页会显示安全告警条幅（不阻止启动）。
 
 数据统计设置：

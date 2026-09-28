@@ -288,6 +288,14 @@ func TestForwardProxy_Authentication_DisabledWhenProxyTokenEmpty(t *testing.T) {
 	}
 }
 
+func TestForwardProxy_Authentication_ProductionRejectsEmptyToken(t *testing.T) {
+	fp := &ForwardProxy{token: "", requireProxyToken: true, events: NoOpEventEmitter{}}
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
+	if _, _, err := fp.authenticate(req); err != ErrAuthRequired {
+		t.Fatalf("authenticate error = %v, want %v", err, ErrAuthRequired)
+	}
+}
+
 func TestForwardProxy_Authentication_RequiredInfoWithEmptyToken(t *testing.T) {
 	rawCredential := func(raw string) string {
 		return "Basic " + base64.StdEncoding.EncodeToString([]byte(raw))
@@ -682,6 +690,13 @@ func TestReverseParsePath_TokenIgnoredWhenProxyTokenEmpty(t *testing.T) {
 	}
 	if parsed.PlatformName != "plat" || parsed.Account != "acct" {
 		t.Fatalf("unexpected parsed identity: plat=%q acct=%q", parsed.PlatformName, parsed.Account)
+	}
+}
+
+func TestReverseParsePath_ProductionRejectsEmptyToken(t *testing.T) {
+	rp := &ReverseProxy{token: "", requireProxyToken: true, events: NoOpEventEmitter{}}
+	if _, err := rp.parsePath("/any-value/plat:acct/https/example.com/path"); err != ErrAuthRequired {
+		t.Fatalf("parsePath error = %v, want %v", err, ErrAuthRequired)
 	}
 }
 

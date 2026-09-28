@@ -113,7 +113,7 @@ services:
 ### 简单接入代理
 如果你只需要一个高性能、大容量、且会自动健康管理的通用代理池，Resin 开箱即用。
 启动 Resin 服务后，你可以按客户端能力选择 HTTP 正向代理、SOCKS5 正向代理或反向代理接入。  
-如果你不想设置代理密码，请将环境变量显式设为空字符串：`RESIN_PROXY_TOKEN=""`（变量必须定义）。此时 HTTP 正向代理可直接接入 `http://127.0.0.1:2260`，SOCKS5 正向代理可直接接入 `socks5://127.0.0.1:2260`。
+生产运行时请为 `RESIN_PROXY_TOKEN` 设置非空随机值；HTTP 正向、SOCKS5 正向和反向代理都要求认证。该变量仍必须显式定义。
 通过二进制文件或源码运行时，Resin 也会在读取配置前自动加载当前工作目录下的 `.env` 文件；已经由系统或 shell 设置的环境变量优先级高于 `.env`。
 
 HTTP 正向代理例子：
@@ -133,7 +133,7 @@ curl --proxy socks5h://127.0.0.1:2260 \
   https://api.ipify.org
 ```
 
-当 `RESIN_PROXY_TOKEN=""` 时，SOCKS5 也允许无认证接入。
+当 `RESIN_PROXY_TOKEN` 为空时，生产代理端点会拒绝请求；请改用非空随机值。
 
 如果你的客户端支持修改服务的 `BASE_URL`，你也可以尝试反向代理接入。URL 格式为：`/令牌/Platform(可选).Account(可选)/协议/目标地址`。例如，你可以通过下面的 curl 命令通过 Resin 访问 `https://api.ipify.org`。
 
@@ -356,11 +356,11 @@ RESIN_PORT=2260 \
 - **Q: 如何让内网或本机目标不走代理节点？**
   - **A**: 配置 `RESIN_PROXY_BYPASS`，用分号、逗号或换行分隔规则。命中的请求会由 Resin 本机直连目标，而不是通过代理节点。例如：`RESIN_PROXY_BYPASS="localhost;127.*;10.*;172.16.0.0/12;192.168.*;<local>"`。规则支持精确主机、`*`/`?` 通配符、CIDR 网段，以及表示无点号本地域名的 `<local>`。
 - **Q: 启动失败提示 `RESIN_PROXY_TOKEN` 未定义？**
-  - **A**: 就算你不打算启用代理密码，也必须显式配置它为空：`RESIN_PROXY_TOKEN=""`。如果你的 shell 会丢弃空环境变量，请创建 `.env` 文件并写入 `RESIN_PROXY_TOKEN=`。
+  - **A**: 必须显式配置 `RESIN_PROXY_TOKEN`，并使用非空随机值；未定义仍会导致启动失败，空值不会开放匿名代理。
 - **Q: 为什么配置 `RESIN_AUTH_VERSION=LEGACY_V0` 会启动失败？**
   - **A**: 当前版本已不再支持 `LEGACY_V0`，请删除 `RESIN_AUTH_VERSION` 或将其设为 `V1`。如果你正从使用旧认证格式的版本升级，请参阅 [v1.0.0 认证迁移指南](doc/v1.0.0-migration-guide.zh-CN.md)。
 - **Q: 为什么 SOCKS5 客户端连不上？**
-  - **A**: 若 `RESIN_PROXY_TOKEN` 非空，客户端需要发送 SOCKS5 用户名密码认证；若它被显式设为空字符串，则也允许 `NO AUTH`。
+  - **A**: 客户端需要发送 SOCKS5 用户名密码认证；空的 `RESIN_PROXY_TOKEN` 不会启用 `NO AUTH`，生产端点会拒绝代理请求。
 - **Q: 使用反向代理 WebSocket 协议（如 ws/wss）怎么写路径？**
   - **A**: 目标无论是不是 ws/wss，URL 路径里的协议字段**依然只能写 `http` 或 `https`**（不能写 ws/wss）。Resin 会自动探测并完成 WebSocket 协议升级（Upgrade）。
 
