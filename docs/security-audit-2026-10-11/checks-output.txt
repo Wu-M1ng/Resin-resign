@@ -1,0 +1,29 @@
+=== RUN   TestAuditRuntimeHasNoHTTPReadDeadlines
+    resin_security_audit_test.go:25: 实际端点构造器：ReadHeaderTimeout/ReadTimeout/IdleTimeout 均为 0；默认管理和反向代理共端口，TLS 关闭
+--- PASS: TestAuditRuntimeHasNoHTTPReadDeadlines (0.00s)
+PASS
+ok  	github.com/Resinat/Resin/cmd/resin	31.524s
+=== RUN   TestAuditFeedLimiterTrustsUnverifiedRealIP
+    resin_security_audit_test.go:22: 同一 RemoteAddr 更换 X-Real-IP 和无效 token 后，4/4 请求通过 limit=2 的限流器
+--- PASS: TestAuditFeedLimiterTrustsUnverifiedRealIP (0.00s)
+=== RUN   TestAuditRejectedFeedRequestsGrowBuckets
+    resin_security_audit_test.go:40: 8 次被拒绝请求仍新建 8 个 token bucket；同一时间窗口内无容量上限
+--- PASS: TestAuditRejectedFeedRequestsGrowBuckets (0.00s)
+PASS
+ok  	github.com/Resinat/Resin/internal/api	31.463s
+=== RUN   TestAuditReverseProxyReturnsActiveHTML
+    resin_security_audit_test.go:40: 上游 HTML/script 原样返回，Content-Type=text/html，无 sandbox CSP 或下载隔离
+--- PASS: TestAuditReverseProxyReturnsActiveHTML (0.00s)
+=== RUN   TestAuditWindowsResetIsNotRecognized
+    resin_security_audit_test.go:51: Windows WSAECONNRESET=10054 被归类为 ERRNO_10054，未命中客户端 reset 豁免
+--- PASS: TestAuditWindowsResetIsNotRecognized (0.00s)
+=== RUN   TestAuditDefaultLogsRetainCredentialAccountAndQuery
+    resin_security_audit_test.go:93: 默认关闭详情日志时，Account 仍包含完整假 API Key，TargetURL 仍包含查询令牌
+--- PASS: TestAuditDefaultLogsRetainCredentialAccountAndQuery (0.00s)
+PASS
+ok  	github.com/Resinat/Resin/internal/proxy	21.575s
+=== RUN   TestAuditDownloaderBuffersDecodedResponse
+    resin_security_audit_test.go:31: 小型 gzip 响应解压后的 2097152 字节被完整保存在返回切片中；大小上限缺失由源码确认
+--- PASS: TestAuditDownloaderBuffersDecodedResponse (0.02s)
+PASS
+ok  	github.com/Resinat/Resin/internal/netutil	20.344s

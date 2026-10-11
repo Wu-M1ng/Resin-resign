@@ -1300,12 +1300,11 @@ func convertClashProxyToNode(proxy map[string]any) (ParsedNode, bool) {
 		if alpn := getStringSlice(proxy, "alpn"); len(alpn) > 0 {
 			tls["alpn"] = alpn
 		}
-		applyUTLSFromValue(tls, firstNonEmpty(
-			getString(proxy, "fingerprint"),
-			getString(proxy, "client-fingerprint"),
-			getString(proxy, "client_fingerprint"),
-			getString(proxy, "fp"),
-		))
+		// Clash fingerprint pins the certificate, not the ClientHello. Hysteria2
+		// uses QUIC, so client-fingerprint hints must not enable TCP uTLS.
+		if fingerprint := strings.TrimSpace(getString(proxy, "fingerprint")); fingerprint != "" {
+			tls["certificate_sha256"] = []string{fingerprint}
+		}
 		applyTLSCertificateFromClash(tls, proxy)
 		outbound := map[string]any{
 			"type":        "hysteria2",
@@ -3360,18 +3359,23 @@ func parseHysteria2URI(uri string) (ParsedNode, bool) {
 	if alpn := splitALPN(query.Get("alpn")); len(alpn) > 0 {
 		tls["alpn"] = alpn
 	}
-	applyUTLSFromValue(tls, firstNonEmpty(
-		query.Get("fp"),
-		query.Get("fingerprint"),
-		query.Get("client-fingerprint"),
-		query.Get("client_fingerprint"),
-	))
+	// Legacy links may carry browser fingerprint hints. They do not apply to
+	// QUIC; certificate hashes must retain their separate validation meaning.
+	if fingerprint := strings.TrimSpace(firstNonEmpty(query.Get("fingerprint"), query.Get("fp"))); fingerprint != "" {
+		switch strings.ToLower(fingerprint) {
+		case "chrome", "firefox", "edge", "safari", "360", "qq", "ios", "android", "random", "randomized", "chrome_psk", "chrome_psk_shuffle", "chrome_padding_psk_shuffle", "chrome_pq", "chrome_pq_psk":
+		default:
+			tls["certificate_sha256"] = []string{fingerprint}
+		}
+	}
 	if pins := splitCommaList(firstNonEmpty(
 		query.Get("pinSHA256"),
 		query.Get("pin-sha256"),
 		query.Get("pin_sha256"),
 	)); len(pins) > 0 {
-		tls["certificate_public_key_sha256"] = pins
+		// Hysteria's pinSHA256 hashes the complete leaf certificate (DER),
+		// not SubjectPublicKeyInfo.
+		tls["certificate_sha256"] = pins
 	}
 	if certPath := strings.TrimSpace(query.Get("ca")); certPath != "" {
 		tls["certificate_path"] = certPath
@@ -3611,6 +3615,8 @@ func normalizeSSPlugin(plugin string, pluginOpts string) (string, string) {
 	switch canonicalSSPluginName(plugin) {
 	case "obfs-local":
 		return "obfs-local", normalizeSimpleObfsOptions(pluginOpts)
+	case "shadow-tls":
+		return "shadow-tls", pluginOpts
 	default:
 		return plugin, pluginOpts
 	}
@@ -3620,6 +3626,8 @@ func canonicalSSPluginName(plugin string) string {
 	switch strings.ToLower(strings.TrimSpace(plugin)) {
 	case "obfs", "simple-obfs", "obfs-local":
 		return "obfs-local"
+	case "shadow-tls", "shadowtls":
+		return "shadow-tls"
 	default:
 		return strings.ToLower(strings.TrimSpace(plugin))
 	}
@@ -3950,10 +3958,32 @@ func setSSPluginFromClash(outbound map[string]any, proxy map[string]any) {
 		return
 	}
 	plugin, pluginOpts = normalizeSSPlugin(plugin, pluginOpts)
+	if plugin == "shadow-tls" {
+		if fingerprint := strings.TrimSpace(getString(proxy, "client-fingerprint", "client_fingerprint")); fingerprint != "" {
+			hasClientFingerprint := false
+			parts := splitUnescaped(pluginOpts, ';')
+			for _, part := range parts {
+				key, _, _ := cutUnescaped(part, '=')
+				if strings.TrimSpace(key) == "client-fingerprint" {
+					hasClientFingerprint = true
+				}
+			}
+			if !hasClientFingerprint {
+				if pluginOpts != "" && parts[len(parts)-1] != "" {
+					pluginOpts += ";"
+				}
+				pluginOpts += "client-fingerprint=" + escapeSSPluginValue(fingerprint)
+			}
+		}
+	}
 	outbound["plugin"] = plugin
 	if pluginOpts != "" {
 		outbound["plugin_opts"] = pluginOpts
 	}
+}
+
+func escapeSSPluginValue(value string) string {
+	return strings.NewReplacer(`\`, `\\`, `;`, `\;`, `=`, `\=`).Replace(value)
 }
 
 func buildPluginOptionsString(opts map[string]any) string {
@@ -3995,7 +4025,7 @@ func buildPluginOptionsString(opts map[string]any) string {
 		if value == "" {
 			continue
 		}
-		parts = append(parts, key+"="+value)
+		parts = append(parts, escapeSSPluginValue(key)+"="+escapeSSPluginValue(value))
 	}
 	return strings.Join(parts, ";")
 }

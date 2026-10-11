@@ -1,0 +1,94 @@
+package proxy
+
+import (
+	"io"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"runtime"
+	"strings"
+	"syscall"
+	"testing"
+
+	"github.com/Resinat/Resin/internal/config"
+	"github.com/Resinat/Resin/internal/model"
+	"github.com/Resinat/Resin/internal/platform"
+)
+
+func TestAuditReverseProxyReturnsActiveHTML(t *testing.T) {
+	// 此 HTML 只设置固定标记，不读取或传送任何凭据。
+	const body = `<html><script>window.resinAuditMarker="fixture-only"</script></html>`
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = io.WriteString(w, body)
+	}))
+	defer upstream.Close()
+	env := newProxyE2EEnv(t)
+	p := NewReverseProxy(ReverseProxyConfig{
+		ProxyToken: "auditproxy", RequireProxyToken: true,
+		Router: env.router, Pool: env.pool, PlatformLookup: env.pool,
+	})
+	r := httptest.NewRequest(http.MethodGet, "/auditproxy/plat/http/"+strings.TrimPrefix(upstream.URL, "http://")+"/page", nil)
+	w := httptest.NewRecorder()
+	p.ServeHTTP(w, r)
+	if w.Code != http.StatusOK || w.Body.String() != body {
+		t.Fatalf("unexpected response: status=%d body=%q", w.Code, w.Body.String())
+	}
+	if w.Header().Get("Content-Security-Policy") != "" || w.Header().Get("Content-Disposition") != "" {
+		t.Fatal("fixture unexpectedly isolated")
+	}
+	t.Log("上游 HTML/script 原样返回，Content-Type=text/html，无 sandbox CSP 或下载隔离")
+}
+
+func TestAuditWindowsResetIsNotRecognized(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Windows socket error diagnostic")
+	}
+	err := &net.OpError{Op: "read", Net: "tcp", Err: syscall.Errno(10054)}
+	if isClientReadResetError(err) {
+		t.Fatal("Windows reset is now recognized; update this audit")
+	}
+	t.Logf("Windows WSAECONNRESET=10054 被归类为 %s，未命中客户端 reset 豁免", extractErrnoCode(err))
+}
+
+func TestAuditDefaultLogsRetainCredentialAccountAndQuery(t *testing.T) {
+	const accountSecret = "Bearer AUDIT_FAKE_API_KEY"
+	const querySecret = "AUDIT_FAKE_QUERY_TOKEN"
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer upstream.Close()
+	env := newProxyE2EEnv(t)
+	plat, ok := env.pool.GetPlatformByName("plat")
+	if !ok {
+		t.Fatal("missing fixture platform")
+	}
+	plat.ReverseProxyEmptyAccountBehavior = string(platform.ReverseProxyEmptyAccountBehaviorAccountHeaderRule)
+	cfg := config.NewDefaultRuntimeConfig()
+	emitter := newMockEventEmitter()
+	p := NewReverseProxy(ReverseProxyConfig{
+		ProxyToken: "auditproxy", RequireProxyToken: true,
+		Router: env.router, Pool: env.pool, PlatformLookup: env.pool,
+		Matcher: BuildAccountMatcher([]model.AccountHeaderRule{{URLPrefix: "*", Headers: []string{"Authorization", "x-api-key"}}}),
+		Events: ConfigAwareEventEmitter{
+			Base:                         emitter,
+			RequestLogEnabled:            func() bool { return cfg.RequestLogEnabled },
+			ReverseProxyLogDetailEnabled: func() bool { return cfg.ReverseProxyLogDetailEnabled },
+		},
+	})
+	r := httptest.NewRequest(http.MethodGet, "/auditproxy/plat/http/"+strings.TrimPrefix(upstream.URL, "http://")+"/api?access_token="+querySecret, nil)
+	r.Header.Set("Authorization", accountSecret)
+	w := httptest.NewRecorder()
+	p.ServeHTTP(w, r)
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("status = %d", w.Code)
+	}
+	entry := <-emitter.logCh
+	if entry.Account != accountSecret || !strings.Contains(entry.TargetURL, querySecret) {
+		t.Fatal("expected fixture credentials in account and target URL")
+	}
+	if len(entry.ReqHeaders) != 0 {
+		t.Fatal("detail logging should be disabled")
+	}
+	t.Log("默认关闭详情日志时，Account 仍包含完整假 API Key，TargetURL 仍包含查询令牌")
+}

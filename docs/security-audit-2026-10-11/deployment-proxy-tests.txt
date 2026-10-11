@@ -1,0 +1,14 @@
+=== RUN   TestForwardProxy_E2EHTTPSuccess
+--- PASS: TestForwardProxy_E2EHTTPSuccess (0.01s)
+=== RUN   TestForwardProxy_CONNECTTunnelSemantics
+--- PASS: TestForwardProxy_CONNECTTunnelSemantics (0.01s)
+=== RUN   TestForwardProxy_AuthRequired
+--- PASS: TestForwardProxy_AuthRequired (0.00s)
+=== RUN   TestForwardProxy_AuthFailed
+--- PASS: TestForwardProxy_AuthFailed (0.00s)
+=== RUN   TestForwardProxy_Authentication_ProductionRejectsEmptyToken
+--- PASS: TestForwardProxy_Authentication_ProductionRejectsEmptyToken (0.00s)
+=== RUN   TestSocks5Inbound_CONNECTSuccess_LogsProxyType3
+--- PASS: TestSocks5Inbound_CONNECTSuccess_LogsProxyType3 (0.00s)
+PASS
+ok  	github.com/Resinat/Resin/internal/proxy	0.198s

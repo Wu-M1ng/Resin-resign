@@ -1,0 +1,26 @@
+package main
+
+import (
+	"github.com/Resinat/Resin/internal/service"
+	"testing"
+)
+
+func TestAuditRuntimeHasNoHTTPReadDeadlines(t *testing.T) {
+	endpoint := service.NewDefaultEndpointWithAddress(2260, "127.0.0.1")
+	// 使用系统分配的回环端口，仅构造运行时，不启动请求服务。
+	endpoint.Port = 0
+	manager := newEndpointRuntimeManager("127.0.0.1", "auditproxy", nil, nil, nil, nil, nil, nil)
+	if err := manager.ApplyEndpoint(endpoint); err != nil {
+		t.Fatal(err)
+	}
+	rt := manager.runtimes[endpoint.ID]
+	defer rt.listener.Close()
+	s := rt.server.httpServer
+	if s.ReadHeaderTimeout != 0 || s.ReadTimeout != 0 || s.IdleTimeout != 0 {
+		t.Fatal("HTTP read deadlines are now configured; update this audit")
+	}
+	if !endpoint.AllowManagement || !endpoint.AllowHTTPReverse || endpoint.TLSEnabled {
+		t.Fatal("default endpoint policy changed; update this audit")
+	}
+	t.Log("实际端点构造器：ReadHeaderTimeout/ReadTimeout/IdleTimeout 均为 0；默认管理和反向代理共端口，TLS 关闭")
+}

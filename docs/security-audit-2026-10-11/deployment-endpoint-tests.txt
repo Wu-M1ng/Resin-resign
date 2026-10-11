@@ -1,0 +1,36 @@
+=== RUN   TestInboundMux_RoutesAPIForControlPlanePaths
+=== RUN   TestInboundMux_RoutesAPIForControlPlanePaths//
+=== RUN   TestInboundMux_RoutesAPIForControlPlanePaths//healthz
+=== RUN   TestInboundMux_RoutesAPIForControlPlanePaths//api
+=== RUN   TestInboundMux_RoutesAPIForControlPlanePaths//api/v1/system/info
+=== RUN   TestInboundMux_RoutesAPIForControlPlanePaths//ui
+=== RUN   TestInboundMux_RoutesAPIForControlPlanePaths//ui/
+=== RUN   TestInboundMux_RoutesAPIForControlPlanePaths//ui/platforms/demo
+=== RUN   TestInboundMux_RoutesAPIForControlPlanePaths//sub/feed-token
+=== RUN   TestInboundMux_RoutesAPIForControlPlanePaths//sub/feed-token/clash-meta
+--- PASS: TestInboundMux_RoutesAPIForControlPlanePaths (0.00s)
+    --- PASS: TestInboundMux_RoutesAPIForControlPlanePaths// (0.00s)
+    --- PASS: TestInboundMux_RoutesAPIForControlPlanePaths//healthz (0.00s)
+    --- PASS: TestInboundMux_RoutesAPIForControlPlanePaths//api (0.00s)
+    --- PASS: TestInboundMux_RoutesAPIForControlPlanePaths//api/v1/system/info (0.00s)
+    --- PASS: TestInboundMux_RoutesAPIForControlPlanePaths//ui (0.00s)
+    --- PASS: TestInboundMux_RoutesAPIForControlPlanePaths//ui/ (0.00s)
+    --- PASS: TestInboundMux_RoutesAPIForControlPlanePaths//ui/platforms/demo (0.00s)
+    --- PASS: TestInboundMux_RoutesAPIForControlPlanePaths//sub/feed-token (0.00s)
+    --- PASS: TestInboundMux_RoutesAPIForControlPlanePaths//sub/feed-token/clash-meta (0.00s)
+=== RUN   TestEndpointInboundMux_AppliesCapabilities
+=== RUN   TestEndpointInboundMux_AppliesCapabilities/health_remains_available
+=== RUN   TestEndpointInboundMux_AppliesCapabilities/management_is_hidden
+=== RUN   TestEndpointInboundMux_AppliesCapabilities/forward_is_forbidden
+=== RUN   TestEndpointInboundMux_AppliesCapabilities/reverse_is_forbidden
+=== RUN   TestEndpointInboundMux_AppliesCapabilities/updated_capabilities_apply_without_rebuilding_mux
+--- PASS: TestEndpointInboundMux_AppliesCapabilities (0.00s)
+    --- PASS: TestEndpointInboundMux_AppliesCapabilities/health_remains_available (0.00s)
+    --- PASS: TestEndpointInboundMux_AppliesCapabilities/management_is_hidden (0.00s)
+    --- PASS: TestEndpointInboundMux_AppliesCapabilities/forward_is_forbidden (0.00s)
+    --- PASS: TestEndpointInboundMux_AppliesCapabilities/reverse_is_forbidden (0.00s)
+    --- PASS: TestEndpointInboundMux_AppliesCapabilities/updated_capabilities_apply_without_rebuilding_mux (0.00s)
+=== RUN   TestEndpointInboundMux_InjectsProxyAuthInfoPolicy
+--- PASS: TestEndpointInboundMux_InjectsProxyAuthInfoPolicy (0.00s)
+PASS
+ok  	github.com/Resinat/Resin/cmd/resin	0.237s

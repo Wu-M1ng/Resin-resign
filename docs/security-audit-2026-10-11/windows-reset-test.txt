@@ -1,0 +1,9 @@
+--- FAIL: TestPumpPreparedTunnelReader_ClientReadResetAfterIngressDoesNotFail (0.00s)
+    tunnel_test.go:181: netOK: got false, want true (stage="connect_client_to_upstream_copy" err=writeto tcp 127.0.0.1:55143->127.0.0.1:55144: readfrom tcp 127.0.0.1:55145->127.0.0.1:55146: read tcp 127.0.0.1:55143->127.0.0.1:55144: wsarecv: An existing connection was forcibly closed by the remote host.)
+--- FAIL: TestPumpPreparedTunnelReader_ClientReadResetAfterIngressDoesNotFail (0.00s)
+    tunnel_test.go:181: netOK: got false, want true (stage="connect_client_to_upstream_copy" err=writeto tcp 127.0.0.1:55147->127.0.0.1:55148: readfrom tcp 127.0.0.1:55149->127.0.0.1:55150: read tcp 127.0.0.1:55147->127.0.0.1:55148: wsarecv: An existing connection was forcibly closed by the remote host.)
+--- FAIL: TestPumpPreparedTunnelReader_ClientReadResetAfterIngressDoesNotFail (0.00s)
+    tunnel_test.go:181: netOK: got false, want true (stage="connect_client_to_upstream_copy" err=writeto tcp 127.0.0.1:55151->127.0.0.1:55152: readfrom tcp 127.0.0.1:55153->127.0.0.1:55154: read tcp 127.0.0.1:55151->127.0.0.1:55152: wsarecv: An existing connection was forcibly closed by the remote host.)
+FAIL
+FAIL	github.com/Resinat/Resin/internal/proxy	0.141s
+FAIL

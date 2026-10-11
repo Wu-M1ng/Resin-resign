@@ -1,0 +1,4053 @@
+{
+  "config": {
+    "protocol_version": "v1.0.0",
+    "scanner_name": "govulncheck",
+    "scanner_version": "v1.9.0",
+    "db": "https://vuln.go.dev",
+    "db_last_modified": "2026-10-08T22:31:09Z",
+    "go_version": "go1.25.5",
+    "scan_level": "symbol",
+    "scan_mode": "source"
+  },
+  "note": "静态调用路径可达提示；不等同于已验证的运行时可利用漏洞。模块间公告可能重叠。",
+  "unique_symbol_advisories": 42,
+  "advisories_per_module": {
+    "golang.org/x/crypto": 1,
+    "golang.org/x/net": 8,
+    "golang.org/x/text": 1,
+    "google.golang.org/grpc": 2,
+    "stdlib": 37
+  },
+  "advisories": [
+    {
+      "id": "GO-2026-4337",
+      "summary": "Unexpected session resumption in crypto/tls",
+      "url": "https://pkg.go.dev/vuln/GO-2026-4337",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.7"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/tls",
+          "function": "HandshakeContext",
+          "receiver": "*Conn",
+          "position": {
+            "filename": "src/crypto/tls/conn.go",
+            "offset": 47771,
+            "line": 1512,
+            "column": 16
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "serve",
+          "receiver": "*conn",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 61541,
+            "line": 1967,
+            "column": 37
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "Serve",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 114687,
+            "line": 3493,
+            "column": 3
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 111396,
+            "line": 3389,
+            "column": 16
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/api",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "internal/api/server.go",
+            "offset": 8245,
+            "line": 193,
+            "column": 36
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-4340",
+      "summary": "Handshake messages may be processed at the incorrect encryption level in crypto/tls",
+      "url": "https://pkg.go.dev/vuln/GO-2026-4340",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.6"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/tls",
+          "function": "Write",
+          "receiver": "*Conn",
+          "position": {
+            "filename": "src/crypto/tls/conn.go",
+            "offset": 38651,
+            "line": 1203,
+            "column": 16
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/proxy",
+          "function": "Write",
+          "receiver": "*countingReadWriteCloser",
+          "position": {
+            "filename": "internal/proxy/request_log_capture.go",
+            "offset": 3010,
+            "line": 139,
+            "column": 23
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-4341",
+      "summary": "Memory exhaustion in query parameter parsing in net/url",
+      "url": "https://pkg.go.dev/vuln/GO-2026-4341",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.6"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/url",
+          "function": "ParseQuery",
+          "position": {
+            "filename": "src/net/url/url.go",
+            "offset": 29309,
+            "line": 989,
+            "column": 6
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http/httputil",
+          "function": "cleanQueryParams$1",
+          "position": {
+            "filename": "src/net/http/httputil/reverseproxy.go",
+            "offset": 26410,
+            "line": 858,
+            "column": 25
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http/httputil",
+          "function": "cleanQueryParams",
+          "position": {
+            "filename": "src/net/http/httputil/reverseproxy.go",
+            "offset": 26510,
+            "line": 864,
+            "column": 19
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http/httputil",
+          "function": "ServeHTTP",
+          "receiver": "*ReverseProxy",
+          "position": {
+            "filename": "src/net/http/httputil/reverseproxy.go",
+            "offset": 13676,
+            "line": 402,
+            "column": 42
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/proxy",
+          "function": "ServeHTTP",
+          "receiver": "*ReverseProxy",
+          "position": {
+            "filename": "internal/proxy/reverse.go",
+            "offset": 13399,
+            "line": 419,
+            "column": 17
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-4559",
+      "summary": "Sending certain HTTP/2 frames can cause a server to panic in golang.org/x/net",
+      "url": "https://pkg.go.dev/vuln/GO-2026-4559",
+      "affected": [
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "fixed": "v0.51.0"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/http2",
+          "function": "ServeConn",
+          "receiver": "*Server",
+          "position": {
+            "filename": "http2/server.go",
+            "offset": 14257,
+            "line": 420,
+            "column": 18
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/http2/h2c",
+          "function": "ServeHTTP",
+          "receiver": "h2cHandler",
+          "position": {
+            "filename": "http2/h2c/h2c.go",
+            "offset": 3330,
+            "line": 97,
+            "column": 16
+          }
+        },
+        {
+          "module": "github.com/sagernet/sing-box",
+          "version": "v1.12.21",
+          "package": "github.com/sagernet/sing-box/transport/v2raygrpclite",
+          "function": "ServeHTTP",
+          "receiver": "*Server",
+          "position": {
+            "filename": "transport/v2raygrpclite/server.go",
+            "offset": 1905,
+            "line": 65,
+            "column": 25
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ServeHTTP",
+          "receiver": "serverHandler",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 109852,
+            "line": 3340,
+            "column": 19
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "serve",
+          "receiver": "*conn",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 66425,
+            "line": 2109,
+            "column": 36
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "Serve",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 114687,
+            "line": 3493,
+            "column": 3
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 111396,
+            "line": 3389,
+            "column": 16
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/api",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "internal/api/server.go",
+            "offset": 8245,
+            "line": 193,
+            "column": 36
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-4601",
+      "summary": "Incorrect parsing of IPv6 host literals in net/url",
+      "url": "https://pkg.go.dev/vuln/GO-2026-4601",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.8"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/url",
+          "function": "ParseRequestURI",
+          "position": {
+            "filename": "src/net/url/url.go",
+            "offset": 14532,
+            "line": 500,
+            "column": 6
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/service",
+          "function": "parseHTTPAbsoluteURL",
+          "position": {
+            "filename": "internal/service/patch_helpers.go",
+            "offset": 3389,
+            "line": 129,
+            "column": 31
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/service",
+          "function": "UpdateSubscription",
+          "receiver": "*ControlPlaneService",
+          "position": {
+            "filename": "internal/service/control_plane_subscription.go",
+            "offset": 9802,
+            "line": 298,
+            "column": 37
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-4602",
+      "summary": "FileInfo can escape from a Root in os",
+      "url": "https://pkg.go.dev/vuln/GO-2026-4602",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.8"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "os",
+          "function": "ReadDir",
+          "position": {
+            "filename": "src/os/dir.go",
+            "offset": 4131,
+            "line": 114,
+            "column": 6
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/requestlog",
+          "function": "listDBFiles",
+          "receiver": "*Repo",
+          "position": {
+            "filename": "internal/requestlog/repo.go",
+            "offset": 15093,
+            "line": 518,
+            "column": 28
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/requestlog",
+          "function": "GetPayloads",
+          "receiver": "*Repo",
+          "position": {
+            "filename": "internal/requestlog/repo.go",
+            "offset": 11486,
+            "line": 364,
+            "column": 29
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-4603",
+      "summary": "URLs in meta content attribute actions are not escaped in html/template",
+      "url": "https://pkg.go.dev/vuln/GO-2026-4603",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.8"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "html/template",
+          "function": "ExecuteTemplate",
+          "receiver": "*Template",
+          "position": {
+            "filename": "src/html/template/template.go",
+            "offset": 4100,
+            "line": 134,
+            "column": 20
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/trace",
+          "function": "Render",
+          "position": {
+            "filename": "trace/trace.go",
+            "offset": 8022,
+            "line": 283,
+            "column": 38
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/trace",
+          "function": "Traces",
+          "position": {
+            "filename": "trace/trace.go",
+            "offset": 4569,
+            "line": 158,
+            "column": 8
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ServeHTTP",
+          "receiver": "HandlerFunc",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 72320,
+            "line": 2322,
+            "column": 3
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ServeHTTP",
+          "receiver": "serverHandler",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 109852,
+            "line": 3340,
+            "column": 19
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "serve",
+          "receiver": "*conn",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 66425,
+            "line": 2109,
+            "column": 36
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "Serve",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 114687,
+            "line": 3493,
+            "column": 3
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 111396,
+            "line": 3389,
+            "column": 16
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/api",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "internal/api/server.go",
+            "offset": 8245,
+            "line": 193,
+            "column": 36
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-4865",
+      "summary": "JsBraceDepth Context Tracking Bugs (XSS) in html/template",
+      "url": "https://pkg.go.dev/vuln/GO-2026-4865",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.9"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "html/template",
+          "function": "Funcs",
+          "receiver": "*Template",
+          "position": {
+            "filename": "src/html/template/template.go",
+            "offset": 10242,
+            "line": 338,
+            "column": 20
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/trace",
+          "function": "eventsTmpl$1",
+          "position": {
+            "filename": "trace/events.go",
+            "offset": 10310,
+            "line": 424,
+            "column": 63
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "sync",
+          "function": "doSlow",
+          "receiver": "*Once",
+          "position": {
+            "filename": "src/sync/once.go",
+            "offset": 2510,
+            "line": 78,
+            "column": 4
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "sync",
+          "function": "Do",
+          "receiver": "*Once",
+          "position": {
+            "filename": "src/sync/once.go",
+            "offset": 2383,
+            "line": 69,
+            "column": 11
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/probe",
+          "function": "Stop",
+          "receiver": "*ProbeManager",
+          "position": {
+            "filename": "internal/probe/manager.go",
+            "offset": 7761,
+            "line": 312,
+            "column": 15
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-4870",
+      "summary": "Unauthenticated TLS 1.3 KeyUpdate record can cause persistent connection retention and DoS in crypto/tls",
+      "url": "https://pkg.go.dev/vuln/GO-2026-4870",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.9"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/tls",
+          "function": "Start",
+          "receiver": "*QUICConn",
+          "position": {
+            "filename": "src/crypto/tls/quic.go",
+            "offset": 6720,
+            "line": 203,
+            "column": 20
+          }
+        },
+        {
+          "module": "github.com/sagernet/quic-go",
+          "version": "v0.52.0-sing-box-mod.3",
+          "package": "github.com/sagernet/quic-go/internal/handshake",
+          "function": "StartHandshake",
+          "receiver": "*cryptoSetup",
+          "position": {
+            "filename": "internal/handshake/crypto_setup.go",
+            "offset": 4324,
+            "line": 179,
+            "column": 21
+          }
+        },
+        {
+          "module": "github.com/sagernet/quic-go",
+          "version": "v0.52.0-sing-box-mod.3",
+          "package": "github.com/sagernet/quic-go",
+          "function": "run",
+          "receiver": "*connection",
+          "position": {
+            "filename": "connection.go",
+            "offset": 17735,
+            "line": 534,
+            "column": 48
+          }
+        },
+        {
+          "module": "github.com/sagernet/quic-go",
+          "version": "v0.52.0-sing-box-mod.3",
+          "package": "github.com/sagernet/quic-go",
+          "function": "doDial$1",
+          "position": {
+            "filename": "transport.go",
+            "offset": 11326,
+            "line": 333,
+            "column": 18
+          }
+        },
+        {
+          "module": "github.com/sagernet/quic-go",
+          "version": "v0.52.0-sing-box-mod.3",
+          "package": "github.com/sagernet/quic-go",
+          "function": "doDial",
+          "receiver": "*Transport",
+          "position": {
+            "filename": "transport.go",
+            "offset": 11297,
+            "line": 332,
+            "column": 2
+          }
+        },
+        {
+          "module": "github.com/sagernet/quic-go",
+          "version": "v0.52.0-sing-box-mod.3",
+          "package": "github.com/sagernet/quic-go",
+          "function": "dial",
+          "receiver": "*Transport",
+          "position": {
+            "filename": "transport.go",
+            "offset": 9378,
+            "line": 256,
+            "column": 17
+          }
+        },
+        {
+          "module": "github.com/sagernet/quic-go",
+          "version": "v0.52.0-sing-box-mod.3",
+          "package": "github.com/sagernet/quic-go",
+          "function": "DialEarly",
+          "receiver": "*Transport",
+          "position": {
+            "filename": "transport.go",
+            "offset": 8934,
+            "line": 243,
+            "column": 15
+          }
+        },
+        {
+          "module": "github.com/sagernet/quic-go",
+          "version": "v0.52.0-sing-box-mod.3",
+          "package": "github.com/sagernet/quic-go",
+          "function": "DialEarly",
+          "position": {
+            "filename": "client.go",
+            "offset": 1996,
+            "line": 65,
+            "column": 27
+          }
+        },
+        {
+          "module": "github.com/sagernet/sing-quic",
+          "version": "v0.5.3",
+          "package": "github.com/sagernet/sing-quic",
+          "function": "DialEarly",
+          "position": {
+            "filename": "quic.go",
+            "offset": 1837,
+            "line": 58,
+            "column": 23
+          }
+        },
+        {
+          "module": "github.com/sagernet/sing-box",
+          "version": "v1.12.21",
+          "package": "github.com/sagernet/sing-box/dns/transport/quic",
+          "function": "openConnection",
+          "receiver": "*Transport",
+          "position": {
+            "filename": "dns/transport/quic/quic.go",
+            "offset": 3434,
+            "line": 128,
+            "column": 41
+          }
+        },
+        {
+          "module": "github.com/sagernet/sing-box",
+          "version": "v1.12.21",
+          "package": "github.com/sagernet/sing-box/dns/transport/quic",
+          "function": "Exchange",
+          "receiver": "*Transport",
+          "position": {
+            "filename": "dns/transport/quic/quic.go",
+            "offset": 2642,
+            "line": 96,
+            "column": 31
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/outbound",
+          "function": "Exchange",
+          "receiver": "*secureDNSFailoverTransport",
+          "position": {
+            "filename": "internal/outbound/secure_dns.go",
+            "offset": 10035,
+            "line": 343,
+            "column": 37
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-4918",
+      "summary": "Infinite loop in HTTP/2 transport when given bad SETTINGS_MAX_FRAME_SIZE in net/http/internal/http2 in golang.org/x/net",
+      "url": "https://pkg.go.dev/vuln/GO-2026-4918",
+      "affected": [
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "fixed": "v0.53.0"
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.10"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "RoundTrip",
+          "receiver": "*Transport",
+          "position": {
+            "filename": "src/net/http/roundtrip.go",
+            "offset": 916,
+            "line": 29,
+            "column": 21
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/proxy",
+          "function": "handleHTTP",
+          "receiver": "*ForwardProxy",
+          "position": {
+            "filename": "internal/proxy/forward.go",
+            "offset": 7794,
+            "line": 267,
+            "column": 34
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/proxy",
+          "function": "ServeHTTP",
+          "receiver": "*ForwardProxy",
+          "position": {
+            "filename": "internal/proxy/forward.go",
+            "offset": 2774,
+            "line": 95,
+            "column": 15
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-4946",
+      "summary": "Inefficient policy validation in crypto/x509",
+      "url": "https://pkg.go.dev/vuln/GO-2026-4946",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.9"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/x509",
+          "function": "Verify",
+          "receiver": "*Certificate",
+          "position": {
+            "filename": "src/crypto/x509/verify.go",
+            "offset": 28274,
+            "line": 821,
+            "column": 23
+          }
+        },
+        {
+          "module": "github.com/sagernet/sing-box",
+          "version": "v1.12.21",
+          "package": "github.com/sagernet/sing-box/common/tls",
+          "function": "NewSTDClient$1",
+          "position": {
+            "filename": "common/tls/std_client.go",
+            "offset": 2755,
+            "line": 99,
+            "column": 46
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/tls",
+          "function": "handshake",
+          "receiver": "*clientHandshakeState",
+          "position": {
+            "filename": "src/crypto/tls/handshake_client.go",
+            "offset": 19684,
+            "line": 600,
+            "column": 39
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/tls",
+          "function": "clientHandshake",
+          "receiver": "*Conn",
+          "position": {
+            "filename": "src/crypto/tls/handshake_client.go",
+            "offset": 12338,
+            "line": 377,
+            "column": 21
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/tls",
+          "function": "handshakeContext",
+          "receiver": "*Conn",
+          "position": {
+            "filename": "src/crypto/tls/conn.go",
+            "offset": 49594,
+            "line": 1575,
+            "column": 32
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/tls",
+          "function": "HandshakeContext",
+          "receiver": "*Conn",
+          "position": {
+            "filename": "src/crypto/tls/conn.go",
+            "offset": 47938,
+            "line": 1515,
+            "column": 27
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/tls",
+          "function": "Handshake",
+          "receiver": "*Conn",
+          "position": {
+            "filename": "src/crypto/tls/conn.go",
+            "offset": 47227,
+            "line": 1499,
+            "column": 27
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/tls",
+          "function": "Write",
+          "receiver": "*Conn",
+          "position": {
+            "filename": "src/crypto/tls/conn.go",
+            "offset": 38904,
+            "line": 1216,
+            "column": 23
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/proxy",
+          "function": "Write",
+          "receiver": "*countingReadWriteCloser",
+          "position": {
+            "filename": "internal/proxy/request_log_capture.go",
+            "offset": 3010,
+            "line": 139,
+            "column": 23
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-4947",
+      "summary": "Unexpected work during chain building in crypto/x509",
+      "url": "https://pkg.go.dev/vuln/GO-2026-4947",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.9"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/x509",
+          "function": "Verify",
+          "receiver": "*Certificate",
+          "position": {
+            "filename": "src/crypto/x509/verify.go",
+            "offset": 28274,
+            "line": 821,
+            "column": 23
+          }
+        },
+        {
+          "module": "github.com/sagernet/sing-box",
+          "version": "v1.12.21",
+          "package": "github.com/sagernet/sing-box/common/tls",
+          "function": "NewSTDClient$1",
+          "position": {
+            "filename": "common/tls/std_client.go",
+            "offset": 2755,
+            "line": 99,
+            "column": 46
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/tls",
+          "function": "handshake",
+          "receiver": "*clientHandshakeState",
+          "position": {
+            "filename": "src/crypto/tls/handshake_client.go",
+            "offset": 19684,
+            "line": 600,
+            "column": 39
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/tls",
+          "function": "clientHandshake",
+          "receiver": "*Conn",
+          "position": {
+            "filename": "src/crypto/tls/handshake_client.go",
+            "offset": 12338,
+            "line": 377,
+            "column": 21
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/tls",
+          "function": "handshakeContext",
+          "receiver": "*Conn",
+          "position": {
+            "filename": "src/crypto/tls/conn.go",
+            "offset": 49594,
+            "line": 1575,
+            "column": 32
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/tls",
+          "function": "HandshakeContext",
+          "receiver": "*Conn",
+          "position": {
+            "filename": "src/crypto/tls/conn.go",
+            "offset": 47938,
+            "line": 1515,
+            "column": 27
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/tls",
+          "function": "Handshake",
+          "receiver": "*Conn",
+          "position": {
+            "filename": "src/crypto/tls/conn.go",
+            "offset": 47227,
+            "line": 1499,
+            "column": 27
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/tls",
+          "function": "Write",
+          "receiver": "*Conn",
+          "position": {
+            "filename": "src/crypto/tls/conn.go",
+            "offset": 38904,
+            "line": 1216,
+            "column": 23
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/proxy",
+          "function": "Write",
+          "receiver": "*countingReadWriteCloser",
+          "position": {
+            "filename": "internal/proxy/request_log_capture.go",
+            "offset": 3010,
+            "line": 139,
+            "column": 23
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-4971",
+      "summary": "Panic in Dial and LookupPort when handling NUL byte on Windows in net",
+      "url": "https://pkg.go.dev/vuln/GO-2026-4971",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.10"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net",
+          "function": "LookupTXT",
+          "receiver": "*Resolver",
+          "position": {
+            "filename": "src/net/lookup.go",
+            "offset": 21833,
+            "line": 636,
+            "column": 20
+          }
+        },
+        {
+          "module": "github.com/sagernet/sing-box",
+          "version": "v1.12.21",
+          "package": "github.com/sagernet/sing-box/dns/transport/local",
+          "function": "Exchange",
+          "receiver": "*FallbackTransport",
+          "position": {
+            "filename": "dns/transport/local/local_fallback.go",
+            "offset": 3814,
+            "line": 144,
+            "column": 39
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/outbound",
+          "function": "Exchange",
+          "receiver": "*secureDNSFailoverTransport",
+          "position": {
+            "filename": "internal/outbound/secure_dns.go",
+            "offset": 10035,
+            "line": 343,
+            "column": 37
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-4976",
+      "summary": "ReverseProxy forwards queries with more than urlmaxqueryparams parameters in net/http/httputil",
+      "url": "https://pkg.go.dev/vuln/GO-2026-4976",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.10"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http/httputil",
+          "function": "ServeHTTP",
+          "receiver": "*ReverseProxy",
+          "position": {
+            "filename": "src/net/http/httputil/reverseproxy.go",
+            "offset": 11747,
+            "line": 345,
+            "column": 24
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/proxy",
+          "function": "ServeHTTP",
+          "receiver": "*ReverseProxy",
+          "position": {
+            "filename": "internal/proxy/reverse.go",
+            "offset": 13399,
+            "line": 419,
+            "column": 17
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-4980",
+      "summary": "Escaper bypass leads to XSS in html/template",
+      "url": "https://pkg.go.dev/vuln/GO-2026-4980",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.10"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "html/template",
+          "function": "Execute",
+          "receiver": "*Template",
+          "position": {
+            "filename": "src/html/template/template.go",
+            "offset": 3516,
+            "line": 120,
+            "column": 20
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/trace",
+          "function": "RenderEvents",
+          "position": {
+            "filename": "trace/events.go",
+            "offset": 2265,
+            "line": 99,
+            "column": 32
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/trace",
+          "function": "Events",
+          "position": {
+            "filename": "trace/trace.go",
+            "offset": 5045,
+            "line": 173,
+            "column": 14
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ServeHTTP",
+          "receiver": "HandlerFunc",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 72320,
+            "line": 2322,
+            "column": 3
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ServeHTTP",
+          "receiver": "serverHandler",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 109852,
+            "line": 3340,
+            "column": 19
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "serve",
+          "receiver": "*conn",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 66425,
+            "line": 2109,
+            "column": 36
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "Serve",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 114687,
+            "line": 3493,
+            "column": 3
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 111396,
+            "line": 3389,
+            "column": 16
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/api",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "internal/api/server.go",
+            "offset": 8245,
+            "line": 193,
+            "column": 36
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-4981",
+      "summary": "Crash when handling long CNAME response in net",
+      "url": "https://pkg.go.dev/vuln/GO-2026-4981",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.10"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net",
+          "function": "LookupCNAME",
+          "receiver": "*Resolver",
+          "position": {
+            "filename": "src/net/lookup.go",
+            "offset": 15600,
+            "line": 469,
+            "column": 20
+          }
+        },
+        {
+          "module": "github.com/sagernet/sing-box",
+          "version": "v1.12.21",
+          "package": "github.com/sagernet/sing-box/dns/transport/local",
+          "function": "Exchange",
+          "receiver": "*FallbackTransport",
+          "position": {
+            "filename": "dns/transport/local/local_fallback.go",
+            "offset": 3141,
+            "line": 116,
+            "column": 39
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/outbound",
+          "function": "Exchange",
+          "receiver": "*secureDNSFailoverTransport",
+          "position": {
+            "filename": "internal/outbound/secure_dns.go",
+            "offset": 10035,
+            "line": 343,
+            "column": 37
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-4982",
+      "summary": "Bypass of meta content URL escaping causes XSS in html/template",
+      "url": "https://pkg.go.dev/vuln/GO-2026-4982",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.10"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "html/template",
+          "function": "ExecuteTemplate",
+          "receiver": "*Template",
+          "position": {
+            "filename": "src/html/template/template.go",
+            "offset": 4100,
+            "line": 134,
+            "column": 20
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/trace",
+          "function": "Render",
+          "position": {
+            "filename": "trace/trace.go",
+            "offset": 8022,
+            "line": 283,
+            "column": 38
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/trace",
+          "function": "Traces",
+          "position": {
+            "filename": "trace/trace.go",
+            "offset": 4569,
+            "line": 158,
+            "column": 8
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ServeHTTP",
+          "receiver": "HandlerFunc",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 72320,
+            "line": 2322,
+            "column": 3
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ServeHTTP",
+          "receiver": "serverHandler",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 109852,
+            "line": 3340,
+            "column": 19
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "serve",
+          "receiver": "*conn",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 66425,
+            "line": 2109,
+            "column": 36
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "Serve",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 114687,
+            "line": 3493,
+            "column": 3
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 111396,
+            "line": 3389,
+            "column": 16
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/api",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "internal/api/server.go",
+            "offset": 8245,
+            "line": 193,
+            "column": 36
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-5018",
+      "summary": "Invoking pathological RSA/DSA parameters may cause DoS in golang.org/x/crypto/ssh",
+      "url": "https://pkg.go.dev/vuln/GO-2026-5018",
+      "affected": [
+        {
+          "module": "golang.org/x/crypto",
+          "version": "v0.48.0",
+          "fixed": "v0.52.0"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "golang.org/x/crypto",
+          "version": "v0.48.0",
+          "package": "golang.org/x/crypto/ssh",
+          "function": "ParsePrivateKey",
+          "position": {
+            "filename": "ssh/keys.go",
+            "offset": 33014,
+            "line": 1233,
+            "column": 6
+          }
+        },
+        {
+          "module": "github.com/sagernet/sing-box",
+          "version": "v1.12.21",
+          "package": "github.com/sagernet/sing-box/protocol/ssh",
+          "function": "NewOutbound",
+          "position": {
+            "filename": "protocol/ssh/outbound.go",
+            "offset": 2751,
+            "line": 93,
+            "column": 37
+          }
+        },
+        {
+          "module": "github.com/sagernet/sing-box",
+          "version": "v1.12.21",
+          "package": "github.com/sagernet/sing-box/adapter/outbound",
+          "function": "Register[github.com/sagernet/sing-box/option.SSHOutboundOptions]$2",
+          "position": {
+            "filename": "adapter/outbound/registry.go",
+            "offset": 780,
+            "line": 23,
+            "column": 21
+          }
+        },
+        {
+          "module": "github.com/sagernet/sing-box",
+          "version": "v1.12.21",
+          "package": "github.com/sagernet/sing-box/adapter/outbound",
+          "function": "CreateOutbound",
+          "receiver": "*Registry",
+          "position": {
+            "filename": "adapter/outbound/registry.go",
+            "offset": 2015,
+            "line": 64,
+            "column": 20
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/outbound",
+          "function": "Build",
+          "receiver": "*SingboxBuilder",
+          "position": {
+            "filename": "internal/outbound/builder.go",
+            "offset": 5729,
+            "line": 141,
+            "column": 38
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-5026",
+      "summary": "Invoking failure to reject ASCII-only Punycode-encoded labels in golang.org/x/net/idna",
+      "url": "https://pkg.go.dev/vuln/GO-2026-5026",
+      "affected": [
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "fixed": "v0.55.0"
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.13"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/idna",
+          "function": "ToASCII",
+          "position": {
+            "filename": "idna/idna10.0.0.go",
+            "offset": 1863,
+            "line": 46,
+            "column": 6
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/http2",
+          "function": "authorityAddr",
+          "position": {
+            "filename": "http2/transport.go",
+            "offset": 20962,
+            "line": 578,
+            "column": 27
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/http2",
+          "function": "RoundTripOpt",
+          "receiver": "*Transport",
+          "position": {
+            "filename": "http2/transport.go",
+            "offset": 21597,
+            "line": 601,
+            "column": 23
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/http2",
+          "function": "RoundTrip",
+          "receiver": "*Transport",
+          "position": {
+            "filename": "http2/transport.go",
+            "offset": 20463,
+            "line": 561,
+            "column": 23
+          }
+        },
+        {
+          "module": "github.com/sagernet/sing-box",
+          "version": "v1.12.21",
+          "package": "github.com/sagernet/sing-box/dns/transport",
+          "function": "RoundTrip",
+          "receiver": "*HTTPSTransportWrapper",
+          "position": {
+            "filename": "dns/transport/https_transport.go",
+            "offset": 1453,
+            "line": 56,
+            "column": 46
+          }
+        },
+        {
+          "module": "github.com/sagernet/sing-box",
+          "version": "v1.12.21",
+          "package": "github.com/sagernet/sing-box/dns/transport",
+          "function": "exchange",
+          "receiver": "*HTTPSTransport",
+          "position": {
+            "filename": "dns/transport/https.go",
+            "offset": 4981,
+            "line": 185,
+            "column": 40
+          }
+        },
+        {
+          "module": "github.com/sagernet/sing-box",
+          "version": "v1.12.21",
+          "package": "github.com/sagernet/sing-box/dns/transport",
+          "function": "Exchange",
+          "receiver": "*HTTPSTransport",
+          "position": {
+            "filename": "dns/transport/https.go",
+            "offset": 3922,
+            "line": 150,
+            "column": 29
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/outbound",
+          "function": "Exchange",
+          "receiver": "*secureDNSFailoverTransport",
+          "position": {
+            "filename": "internal/outbound/secure_dns.go",
+            "offset": 10035,
+            "line": 343,
+            "column": 37
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-5037",
+      "summary": "Inefficient candidate hostname parsing in crypto/x509",
+      "url": "https://pkg.go.dev/vuln/GO-2026-5037",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.11"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/x509",
+          "function": "VerifyHostname",
+          "receiver": "*Certificate",
+          "position": {
+            "filename": "src/crypto/x509/verify.go",
+            "offset": 38811,
+            "line": 1206,
+            "column": 23
+          }
+        },
+        {
+          "module": "github.com/metacubex/utls",
+          "version": "v1.8.4",
+          "package": "github.com/metacubex/utls",
+          "function": "loadSession",
+          "receiver": "*Conn",
+          "position": {
+            "filename": "handshake_client.go",
+            "offset": 16178,
+            "line": 494,
+            "column": 56
+          }
+        },
+        {
+          "module": "github.com/metacubex/utls",
+          "version": "v1.8.4",
+          "package": "github.com/metacubex/utls",
+          "function": "clientHandshake",
+          "receiver": "*Conn",
+          "position": {
+            "filename": "handshake_client.go",
+            "offset": 9539,
+            "line": 284,
+            "column": 55
+          }
+        },
+        {
+          "module": "github.com/metacubex/utls",
+          "version": "v1.8.4",
+          "package": "github.com/metacubex/utls",
+          "function": "handshakeContext",
+          "receiver": "*Conn",
+          "position": {
+            "filename": "conn.go",
+            "offset": 51015,
+            "line": 1627,
+            "column": 32
+          }
+        },
+        {
+          "module": "github.com/metacubex/utls",
+          "version": "v1.8.4",
+          "package": "github.com/metacubex/utls",
+          "function": "HandshakeContext",
+          "receiver": "*Conn",
+          "position": {
+            "filename": "conn.go",
+            "offset": 49359,
+            "line": 1567,
+            "column": 27
+          }
+        },
+        {
+          "module": "github.com/metacubex/utls",
+          "version": "v1.8.4",
+          "package": "github.com/metacubex/utls",
+          "function": "Handshake",
+          "receiver": "*Conn",
+          "position": {
+            "filename": "conn.go",
+            "offset": 48648,
+            "line": 1551,
+            "column": 27
+          }
+        },
+        {
+          "module": "github.com/metacubex/utls",
+          "version": "v1.8.4",
+          "package": "github.com/metacubex/utls",
+          "function": "Write",
+          "receiver": "*Conn",
+          "position": {
+            "filename": "conn.go",
+            "offset": 40325,
+            "line": 1268,
+            "column": 23
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/proxy",
+          "function": "Write",
+          "receiver": "*countingReadWriteCloser",
+          "position": {
+            "filename": "internal/proxy/request_log_capture.go",
+            "offset": 3010,
+            "line": 139,
+            "column": 23
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-5039",
+      "summary": "Arbitrary inputs are included in errors without any escaping in net/textproto",
+      "url": "https://pkg.go.dev/vuln/GO-2026-5039",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.11"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/textproto",
+          "function": "ReadMIMEHeader",
+          "receiver": "*Reader",
+          "position": {
+            "filename": "src/net/textproto/reader.go",
+            "offset": 13679,
+            "line": 506,
+            "column": 18
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "readTrailer",
+          "receiver": "*body",
+          "position": {
+            "filename": "src/net/http/transfer.go",
+            "offset": 26815,
+            "line": 937,
+            "column": 53
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "readLocked",
+          "receiver": "*body",
+          "position": {
+            "filename": "src/net/http/transfer.go",
+            "offset": 24363,
+            "line": 851,
+            "column": 25
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "Read",
+          "receiver": "*body",
+          "position": {
+            "filename": "src/net/http/transfer.go",
+            "offset": 24099,
+            "line": 837,
+            "column": 21
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/proxy",
+          "function": "Read",
+          "receiver": "*countingReadCloser",
+          "position": {
+            "filename": "internal/proxy/request_log_capture.go",
+            "offset": 2241,
+            "line": 103,
+            "column": 21
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-5856",
+      "summary": "Invoking Encrypted Client Hello privacy leak in crypto/tls",
+      "url": "https://pkg.go.dev/vuln/GO-2026-5856",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.12"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/tls",
+          "function": "HandshakeContext",
+          "receiver": "*Conn",
+          "position": {
+            "filename": "src/crypto/tls/conn.go",
+            "offset": 47771,
+            "line": 1512,
+            "column": 16
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "serve",
+          "receiver": "*conn",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 61541,
+            "line": 1967,
+            "column": 37
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "Serve",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 114687,
+            "line": 3493,
+            "column": 3
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 111396,
+            "line": 3389,
+            "column": 16
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/api",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "internal/api/server.go",
+            "offset": 8245,
+            "line": 193,
+            "column": 36
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-5970",
+      "summary": "Infinite loop on invalid input in golang.org/x/text",
+      "url": "https://pkg.go.dev/vuln/GO-2026-5970",
+      "affected": [
+        {
+          "module": "golang.org/x/text",
+          "version": "v0.34.0",
+          "fixed": "v0.39.0"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "golang.org/x/text",
+          "version": "v0.34.0",
+          "package": "golang.org/x/text/unicode/norm",
+          "function": "String",
+          "receiver": "Form",
+          "position": {
+            "filename": "unicode/norm/normalize.go",
+            "offset": 1636,
+            "line": 59,
+            "column": 15
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/idna",
+          "function": "validateAndMap",
+          "position": {
+            "filename": "idna/idna10.0.0.go",
+            "offset": 16447,
+            "line": 525,
+            "column": 23
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/idna",
+          "function": "process",
+          "receiver": "*Profile",
+          "position": {
+            "filename": "idna/idna10.0.0.go",
+            "offset": 11460,
+            "line": 340,
+            "column": 29
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/idna",
+          "function": "ToASCII",
+          "position": {
+            "filename": "idna/idna10.0.0.go",
+            "offset": 1923,
+            "line": 47,
+            "column": 25
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/http2",
+          "function": "authorityAddr",
+          "position": {
+            "filename": "http2/transport.go",
+            "offset": 20962,
+            "line": 578,
+            "column": 27
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/http2",
+          "function": "RoundTripOpt",
+          "receiver": "*Transport",
+          "position": {
+            "filename": "http2/transport.go",
+            "offset": 21597,
+            "line": 601,
+            "column": 23
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/http2",
+          "function": "RoundTrip",
+          "receiver": "*Transport",
+          "position": {
+            "filename": "http2/transport.go",
+            "offset": 20463,
+            "line": 561,
+            "column": 23
+          }
+        },
+        {
+          "module": "github.com/sagernet/sing-box",
+          "version": "v1.12.21",
+          "package": "github.com/sagernet/sing-box/dns/transport",
+          "function": "RoundTrip",
+          "receiver": "*HTTPSTransportWrapper",
+          "position": {
+            "filename": "dns/transport/https_transport.go",
+            "offset": 1453,
+            "line": 56,
+            "column": 46
+          }
+        },
+        {
+          "module": "github.com/sagernet/sing-box",
+          "version": "v1.12.21",
+          "package": "github.com/sagernet/sing-box/dns/transport",
+          "function": "exchange",
+          "receiver": "*HTTPSTransport",
+          "position": {
+            "filename": "dns/transport/https.go",
+            "offset": 4981,
+            "line": 185,
+            "column": 40
+          }
+        },
+        {
+          "module": "github.com/sagernet/sing-box",
+          "version": "v1.12.21",
+          "package": "github.com/sagernet/sing-box/dns/transport",
+          "function": "Exchange",
+          "receiver": "*HTTPSTransport",
+          "position": {
+            "filename": "dns/transport/https.go",
+            "offset": 3922,
+            "line": 150,
+            "column": 29
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/outbound",
+          "function": "Exchange",
+          "receiver": "*secureDNSFailoverTransport",
+          "position": {
+            "filename": "internal/outbound/secure_dns.go",
+            "offset": 10035,
+            "line": 343,
+            "column": 37
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-5972",
+      "summary": "Enforce maximum recursion depth in encoding/asn1",
+      "url": "https://pkg.go.dev/vuln/GO-2026-5972",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.13"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "encoding/asn1",
+          "function": "Unmarshal",
+          "position": {
+            "filename": "src/encoding/asn1/asn1.go",
+            "offset": 33808,
+            "line": 1140,
+            "column": 6
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/x509",
+          "function": "ParsePKCS8PrivateKey",
+          "position": {
+            "filename": "src/crypto/x509/pkcs8.go",
+            "offset": 1192,
+            "line": 40,
+            "column": 29
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/tls",
+          "function": "parsePrivateKey",
+          "position": {
+            "filename": "src/crypto/tls/tls.go",
+            "offset": 12728,
+            "line": 371,
+            "column": 42
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/tls",
+          "function": "X509KeyPair",
+          "position": {
+            "filename": "src/crypto/tls/tls.go",
+            "offset": 11215,
+            "line": 327,
+            "column": 40
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/tls",
+          "function": "LoadX509KeyPair",
+          "position": {
+            "filename": "src/crypto/tls/tls.go",
+            "offset": 8468,
+            "line": 256,
+            "column": 20
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/cmd/resin",
+          "function": "ApplyEndpoint",
+          "receiver": "*endpointRuntimeManager",
+          "position": {
+            "filename": "cmd/resin/endpoint_runtime.go",
+            "offset": 2782,
+            "line": 111,
+            "column": 39
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/service",
+          "function": "UpdateEndpoint",
+          "receiver": "*ControlPlaneService",
+          "position": {
+            "filename": "internal/service/control_plane_endpoint.go",
+            "offset": 13963,
+            "line": 394,
+            "column": 49
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-6061",
+      "summary": "Vulnerabilities in the xDS RBAC authorization engine and the HTTP/2 transport server implementation in google.golang.org/grpc",
+      "url": "https://pkg.go.dev/vuln/GO-2026-6061",
+      "affected": [
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "fixed": "v1.82.1"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "package": "google.golang.org/grpc/internal/transport",
+          "function": "GracefulClose",
+          "receiver": "*http2Client",
+          "position": {
+            "filename": "internal/transport/http2_client.go",
+            "offset": 36880,
+            "line": 1067,
+            "column": 23
+          }
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "package": "google.golang.org/grpc",
+          "function": "tearDown",
+          "receiver": "*addrConn",
+          "position": {
+            "filename": "clientconn.go",
+            "offset": 54173,
+            "line": 1584,
+            "column": 23
+          }
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "package": "google.golang.org/grpc",
+          "function": "Close$2",
+          "position": {
+            "filename": "clientconn.go",
+            "offset": 41081,
+            "line": 1179,
+            "column": 15
+          }
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "package": "google.golang.org/grpc",
+          "function": "Close",
+          "receiver": "*ClientConn",
+          "position": {
+            "filename": "clientconn.go",
+            "offset": 41024,
+            "line": 1177,
+            "column": 3
+          }
+        },
+        {
+          "module": "github.com/sagernet/sing-box",
+          "version": "v1.12.21",
+          "package": "github.com/sagernet/sing-box/transport/v2raygrpc",
+          "function": "Close",
+          "receiver": "*Client",
+          "position": {
+            "filename": "transport/v2raygrpc/client.go",
+            "offset": 3361,
+            "line": 115,
+            "column": 13
+          }
+        },
+        {
+          "module": "github.com/sagernet/sing",
+          "version": "v0.7.18",
+          "package": "github.com/sagernet/sing/common",
+          "function": "Close",
+          "position": {
+            "filename": "common/cond.go",
+            "offset": 6493,
+            "line": 371,
+            "column": 18
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/outbound",
+          "function": "Build",
+          "receiver": "*SingboxBuilder",
+          "position": {
+            "filename": "internal/outbound/builder.go",
+            "offset": 6171,
+            "line": 156,
+            "column": 20
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-6089",
+      "summary": "Apply ReadHeaderTimeout when doing unencrypted HTTP/2 check in net/http",
+      "url": "https://pkg.go.dev/vuln/GO-2026-6089",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.13"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 111183,
+            "line": 3377,
+            "column": 18
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/api",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "internal/api/server.go",
+            "offset": 8245,
+            "line": 193,
+            "column": 36
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-6090",
+      "summary": "Limit handshake messages we are willing to accept post-handshake in crypto/tls",
+      "url": "https://pkg.go.dev/vuln/GO-2026-6090",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.13"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/tls",
+          "function": "DialContext",
+          "receiver": "*Dialer",
+          "position": {
+            "filename": "src/crypto/tls/tls.go",
+            "offset": 7443,
+            "line": 230,
+            "column": 18
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "dialTLSWithContext",
+          "receiver": "*http2Transport",
+          "position": {
+            "filename": "src/net/http/h2_bundle.go",
+            "offset": 344560,
+            "line": 10565,
+            "column": 31
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "dialTLS",
+          "receiver": "*http2Transport",
+          "position": {
+            "filename": "src/net/http/h2_bundle.go",
+            "offset": 273590,
+            "line": 8070,
+            "column": 36
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "dialClientConn",
+          "receiver": "*http2Transport",
+          "position": {
+            "filename": "src/net/http/h2_bundle.go",
+            "offset": 272786,
+            "line": 8042,
+            "column": 25
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "getClientConn",
+          "receiver": "*http2clientConnPool",
+          "position": {
+            "filename": "src/net/http/h2_bundle.go",
+            "offset": 42706,
+            "line": 795,
+            "column": 32
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "GetClientConn",
+          "receiver": "*http2clientConnPool",
+          "position": {
+            "filename": "src/net/http/h2_bundle.go",
+            "offset": 42247,
+            "line": 781,
+            "column": 24
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "RoundTripOpt",
+          "receiver": "*http2Transport",
+          "position": {
+            "filename": "src/net/http/h2_bundle.go",
+            "offset": 268579,
+            "line": 7914,
+            "column": 40
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "RoundTrip",
+          "receiver": "*http2unencryptedTransport",
+          "position": {
+            "filename": "src/net/http/h2_bundle.go",
+            "offset": 257635,
+            "line": 7617,
+            "column": 42
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "roundTrip",
+          "receiver": "*Transport",
+          "position": {
+            "filename": "src/net/http/transport.go",
+            "offset": 24589,
+            "line": 694,
+            "column": 35
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "RoundTrip",
+          "receiver": "*Transport",
+          "position": {
+            "filename": "src/net/http/roundtrip.go",
+            "offset": 1026,
+            "line": 33,
+            "column": 20
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/proxy",
+          "function": "handleHTTP",
+          "receiver": "*ForwardProxy",
+          "position": {
+            "filename": "internal/proxy/forward.go",
+            "offset": 7794,
+            "line": 267,
+            "column": 34
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/proxy",
+          "function": "ServeHTTP",
+          "receiver": "*ForwardProxy",
+          "position": {
+            "filename": "internal/proxy/forward.go",
+            "offset": 2774,
+            "line": 95,
+            "column": 15
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-6091",
+      "summary": "Fix Javascript regexp context tracking in html/template",
+      "url": "https://pkg.go.dev/vuln/GO-2026-6091",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.13"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "html/template",
+          "function": "ExecuteTemplate",
+          "receiver": "*Template",
+          "position": {
+            "filename": "src/html/template/template.go",
+            "offset": 4100,
+            "line": 134,
+            "column": 20
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/trace",
+          "function": "Render",
+          "position": {
+            "filename": "trace/trace.go",
+            "offset": 8022,
+            "line": 283,
+            "column": 38
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/trace",
+          "function": "Traces",
+          "position": {
+            "filename": "trace/trace.go",
+            "offset": 4569,
+            "line": 158,
+            "column": 8
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ServeHTTP",
+          "receiver": "HandlerFunc",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 72320,
+            "line": 2322,
+            "column": 3
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ServeHTTP",
+          "receiver": "serverHandler",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 109852,
+            "line": 3340,
+            "column": 19
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "serve",
+          "receiver": "*conn",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 66425,
+            "line": 2109,
+            "column": 36
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "Serve",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 114687,
+            "line": 3493,
+            "column": 3
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 111396,
+            "line": 3389,
+            "column": 16
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/api",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "internal/api/server.go",
+            "offset": 8245,
+            "line": 193,
+            "column": 36
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-6218",
+      "summary": "Avoid quadratic complexity in resolvePath in net/url",
+      "url": "https://pkg.go.dev/vuln/GO-2026-6218",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.25.13"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/url",
+          "function": "Parse",
+          "receiver": "*URL",
+          "position": {
+            "filename": "src/net/url/url.go",
+            "offset": 32057,
+            "line": 1123,
+            "column": 15
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "do",
+          "receiver": "*Client",
+          "position": {
+            "filename": "src/net/http/client.go",
+            "offset": 22242,
+            "line": 645,
+            "column": 27
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "Do",
+          "receiver": "*Client",
+          "position": {
+            "filename": "src/net/http/client.go",
+            "offset": 20683,
+            "line": 587,
+            "column": 13
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/netutil",
+          "function": "Download",
+          "receiver": "*DirectDownloader",
+          "position": {
+            "filename": "internal/netutil/downloader.go",
+            "offset": 2369,
+            "line": 90,
+            "column": 24
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-6348",
+      "summary": "Heap Memory Exhaustion (OOM) via HTTP/2 DATA Frame Fragmentation in google.golang.org/grpc",
+      "url": "https://pkg.go.dev/vuln/GO-2026-6348",
+      "affected": [
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "fixed": "v1.83.1"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "package": "google.golang.org/grpc/internal/transport",
+          "function": "GracefulClose",
+          "receiver": "*http2Client",
+          "position": {
+            "filename": "internal/transport/http2_client.go",
+            "offset": 36880,
+            "line": 1067,
+            "column": 23
+          }
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "package": "google.golang.org/grpc",
+          "function": "tearDown",
+          "receiver": "*addrConn",
+          "position": {
+            "filename": "clientconn.go",
+            "offset": 54173,
+            "line": 1584,
+            "column": 23
+          }
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "package": "google.golang.org/grpc",
+          "function": "Close$2",
+          "position": {
+            "filename": "clientconn.go",
+            "offset": 41081,
+            "line": 1179,
+            "column": 15
+          }
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "package": "google.golang.org/grpc",
+          "function": "Close",
+          "receiver": "*ClientConn",
+          "position": {
+            "filename": "clientconn.go",
+            "offset": 41024,
+            "line": 1177,
+            "column": 3
+          }
+        },
+        {
+          "module": "github.com/sagernet/sing-box",
+          "version": "v1.12.21",
+          "package": "github.com/sagernet/sing-box/transport/v2raygrpc",
+          "function": "Close",
+          "receiver": "*Client",
+          "position": {
+            "filename": "transport/v2raygrpc/client.go",
+            "offset": 3361,
+            "line": 115,
+            "column": 13
+          }
+        },
+        {
+          "module": "github.com/sagernet/sing",
+          "version": "v0.7.18",
+          "package": "github.com/sagernet/sing/common",
+          "function": "Close",
+          "position": {
+            "filename": "common/cond.go",
+            "offset": 6493,
+            "line": 371,
+            "column": 18
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/outbound",
+          "function": "Build",
+          "receiver": "*SingboxBuilder",
+          "position": {
+            "filename": "internal/outbound/builder.go",
+            "offset": 6171,
+            "line": 156,
+            "column": 20
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-6599",
+      "summary": "Reset context tracking on consecutive template expressions in html/template",
+      "url": "https://pkg.go.dev/vuln/GO-2026-6599",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.26.9"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "html/template",
+          "function": "ExecuteTemplate",
+          "receiver": "*Template",
+          "position": {
+            "filename": "src/html/template/template.go",
+            "offset": 4100,
+            "line": 134,
+            "column": 20
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/trace",
+          "function": "Render",
+          "position": {
+            "filename": "trace/trace.go",
+            "offset": 8022,
+            "line": 283,
+            "column": 38
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/trace",
+          "function": "Traces",
+          "position": {
+            "filename": "trace/trace.go",
+            "offset": 4569,
+            "line": 158,
+            "column": 8
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ServeHTTP",
+          "receiver": "HandlerFunc",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 72320,
+            "line": 2322,
+            "column": 3
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ServeHTTP",
+          "receiver": "serverHandler",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 109852,
+            "line": 3340,
+            "column": 19
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "serve",
+          "receiver": "*conn",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 66425,
+            "line": 2109,
+            "column": 36
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "Serve",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 114687,
+            "line": 3493,
+            "column": 3
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 111396,
+            "line": 3389,
+            "column": 16
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/api",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "internal/api/server.go",
+            "offset": 8245,
+            "line": 193,
+            "column": 36
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-6600",
+      "summary": "Recognize yield as regexp preceder keyword in html/template",
+      "url": "https://pkg.go.dev/vuln/GO-2026-6600",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.26.9"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "html/template",
+          "function": "Execute",
+          "receiver": "*Template",
+          "position": {
+            "filename": "src/html/template/template.go",
+            "offset": 3516,
+            "line": 120,
+            "column": 20
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/trace",
+          "function": "RenderEvents",
+          "position": {
+            "filename": "trace/events.go",
+            "offset": 2265,
+            "line": 99,
+            "column": 32
+          }
+        },
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/trace",
+          "function": "Events",
+          "position": {
+            "filename": "trace/trace.go",
+            "offset": 5045,
+            "line": 173,
+            "column": 14
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ServeHTTP",
+          "receiver": "HandlerFunc",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 72320,
+            "line": 2322,
+            "column": 3
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ServeHTTP",
+          "receiver": "serverHandler",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 109852,
+            "line": 3340,
+            "column": 19
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "serve",
+          "receiver": "*conn",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 66425,
+            "line": 2109,
+            "column": 36
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "Serve",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 114687,
+            "line": 3493,
+            "column": 3
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 111396,
+            "line": 3389,
+            "column": 16
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/api",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "internal/api/server.go",
+            "offset": 8245,
+            "line": 193,
+            "column": 36
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-6603",
+      "summary": "HTTP/2 server memory exhaustion due to Trailer headers in net/http",
+      "url": "https://pkg.go.dev/vuln/GO-2026-6603",
+      "affected": [
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "fixed": "v0.60.0"
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.26.9"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "package": "golang.org/x/net/http2",
+          "function": "Read",
+          "receiver": "*gzipReader",
+          "position": {
+            "filename": "http2/transport.go",
+            "offset": 95878,
+            "line": 3220,
+            "column": 23
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/proxy",
+          "function": "Read",
+          "receiver": "*countingReadCloser",
+          "position": {
+            "filename": "internal/proxy/request_log_capture.go",
+            "offset": 2241,
+            "line": 103,
+            "column": 21
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-6605",
+      "summary": "HTTP/1 client connection desynchronization after CONNECT rejection in net/http",
+      "url": "https://pkg.go.dev/vuln/GO-2026-6605",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.26.9"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "RoundTrip",
+          "receiver": "*Transport",
+          "position": {
+            "filename": "src/net/http/roundtrip.go",
+            "offset": 916,
+            "line": 29,
+            "column": 21
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/proxy",
+          "function": "handleHTTP",
+          "receiver": "*ForwardProxy",
+          "position": {
+            "filename": "internal/proxy/forward.go",
+            "offset": 7794,
+            "line": 267,
+            "column": 34
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/proxy",
+          "function": "ServeHTTP",
+          "receiver": "*ForwardProxy",
+          "position": {
+            "filename": "internal/proxy/forward.go",
+            "offset": 2774,
+            "line": 95,
+            "column": 15
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-6607",
+      "summary": "Reject malformed ECH outer extension references in crypto/tls",
+      "url": "https://pkg.go.dev/vuln/GO-2026-6607",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.26.9"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "crypto/tls",
+          "function": "DialContext",
+          "receiver": "*Dialer",
+          "position": {
+            "filename": "src/crypto/tls/tls.go",
+            "offset": 7443,
+            "line": 230,
+            "column": 18
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "dialTLSWithContext",
+          "receiver": "*http2Transport",
+          "position": {
+            "filename": "src/net/http/h2_bundle.go",
+            "offset": 344560,
+            "line": 10565,
+            "column": 31
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "dialTLS",
+          "receiver": "*http2Transport",
+          "position": {
+            "filename": "src/net/http/h2_bundle.go",
+            "offset": 273590,
+            "line": 8070,
+            "column": 36
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "dialClientConn",
+          "receiver": "*http2Transport",
+          "position": {
+            "filename": "src/net/http/h2_bundle.go",
+            "offset": 272786,
+            "line": 8042,
+            "column": 25
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "getClientConn",
+          "receiver": "*http2clientConnPool",
+          "position": {
+            "filename": "src/net/http/h2_bundle.go",
+            "offset": 42706,
+            "line": 795,
+            "column": 32
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "GetClientConn",
+          "receiver": "*http2clientConnPool",
+          "position": {
+            "filename": "src/net/http/h2_bundle.go",
+            "offset": 42247,
+            "line": 781,
+            "column": 24
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "RoundTripOpt",
+          "receiver": "*http2Transport",
+          "position": {
+            "filename": "src/net/http/h2_bundle.go",
+            "offset": 268579,
+            "line": 7914,
+            "column": 40
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "RoundTrip",
+          "receiver": "*http2unencryptedTransport",
+          "position": {
+            "filename": "src/net/http/h2_bundle.go",
+            "offset": 257635,
+            "line": 7617,
+            "column": 42
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "roundTrip",
+          "receiver": "*Transport",
+          "position": {
+            "filename": "src/net/http/transport.go",
+            "offset": 24589,
+            "line": 694,
+            "column": 35
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "RoundTrip",
+          "receiver": "*Transport",
+          "position": {
+            "filename": "src/net/http/roundtrip.go",
+            "offset": 1026,
+            "line": 33,
+            "column": 20
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/proxy",
+          "function": "handleHTTP",
+          "receiver": "*ForwardProxy",
+          "position": {
+            "filename": "internal/proxy/forward.go",
+            "offset": 7794,
+            "line": 267,
+            "column": 34
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/proxy",
+          "function": "ServeHTTP",
+          "receiver": "*ForwardProxy",
+          "position": {
+            "filename": "internal/proxy/forward.go",
+            "offset": 2774,
+            "line": 95,
+            "column": 15
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-6608",
+      "summary": "Memory limit bypass when parsing MIME headers in net/textproto, mime/multipart",
+      "url": "https://pkg.go.dev/vuln/GO-2026-6608",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.26.9"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "mime/multipart",
+          "function": "ReadForm",
+          "receiver": "*Reader",
+          "position": {
+            "filename": "src/mime/multipart/formdata.go",
+            "offset": 958,
+            "line": 32,
+            "column": 18
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ParseMultipartForm",
+          "receiver": "*Request",
+          "position": {
+            "filename": "src/net/http/request.go",
+            "offset": 44785,
+            "line": 1389,
+            "column": 23
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "FormValue",
+          "receiver": "*Request",
+          "position": {
+            "filename": "src/net/http/request.go",
+            "offset": 45767,
+            "line": 1421,
+            "column": 23
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http/pprof",
+          "function": "Profile",
+          "position": {
+            "filename": "src/net/http/pprof/pprof.go",
+            "offset": 4766,
+            "line": 146,
+            "column": 42
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ServeHTTP",
+          "receiver": "HandlerFunc",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 72320,
+            "line": 2322,
+            "column": 3
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ServeHTTP",
+          "receiver": "serverHandler",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 109852,
+            "line": 3340,
+            "column": 19
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "serve",
+          "receiver": "*conn",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 66425,
+            "line": 2109,
+            "column": 36
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "Serve",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 114687,
+            "line": 3493,
+            "column": 3
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 111396,
+            "line": 3389,
+            "column": 16
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/api",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "internal/api/server.go",
+            "offset": 8245,
+            "line": 193,
+            "column": 36
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-6609",
+      "summary": "Lack of limit on size of parsed Range headers in net/http",
+      "url": "https://pkg.go.dev/vuln/GO-2026-6609",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.26.9"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ServeFileFS",
+          "position": {
+            "filename": "src/net/http/fs.go",
+            "offset": 26128,
+            "line": 848,
+            "column": 6
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/api",
+          "function": "newWebUIHandler$1",
+          "position": {
+            "filename": "internal/api/webui.go",
+            "offset": 997,
+            "line": 42,
+            "column": 20
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ServeHTTP",
+          "receiver": "HandlerFunc",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 72320,
+            "line": 2322,
+            "column": 3
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ServeHTTP",
+          "receiver": "serverHandler",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 109852,
+            "line": 3340,
+            "column": 19
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "serve",
+          "receiver": "*conn",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 66425,
+            "line": 2109,
+            "column": 36
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "Serve",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 114687,
+            "line": 3493,
+            "column": 3
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "src/net/http/server.go",
+            "offset": 111396,
+            "line": 3389,
+            "column": 16
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/api",
+          "function": "ListenAndServe",
+          "receiver": "*Server",
+          "position": {
+            "filename": "internal/api/server.go",
+            "offset": 8245,
+            "line": 193,
+            "column": 36
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-6610",
+      "summary": "HTTP/2 transport accepts malformed framing-related headers in net/http",
+      "url": "https://pkg.go.dev/vuln/GO-2026-6610",
+      "affected": [
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "fixed": "v0.60.0"
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.26.9"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "Do",
+          "receiver": "*Client",
+          "position": {
+            "filename": "src/net/http/client.go",
+            "offset": 20633,
+            "line": 586,
+            "column": 18
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/netutil",
+          "function": "Download",
+          "receiver": "*DirectDownloader",
+          "position": {
+            "filename": "internal/netutil/downloader.go",
+            "offset": 2369,
+            "line": 90,
+            "column": 24
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-6611",
+      "summary": "Excessive CPU consumption from repeated initial window changes in net/http",
+      "url": "https://pkg.go.dev/vuln/GO-2026-6611",
+      "affected": [
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "fixed": "v0.60.0"
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.26.9"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "Write",
+          "receiver": "*http2responseWriter",
+          "position": {
+            "filename": "src/net/http/h2_bundle.go",
+            "offset": 236690,
+            "line": 6975,
+            "column": 31
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "encoding/json",
+          "function": "Encode",
+          "receiver": "*Encoder",
+          "position": {
+            "filename": "src/encoding/json/stream.go",
+            "offset": 5898,
+            "line": 233,
+            "column": 25
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/api",
+          "function": "WriteJSON",
+          "position": {
+            "filename": "internal/api/response.go",
+            "offset": 357,
+            "line": 13,
+            "column": 31
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-6612",
+      "summary": "Double flow control refund on HTTP/2 server streams in net/http",
+      "url": "https://pkg.go.dev/vuln/GO-2026-6612",
+      "affected": [
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "fixed": "v0.60.0"
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.26.9"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "Write",
+          "receiver": "*Request",
+          "position": {
+            "filename": "src/net/http/request.go",
+            "offset": 20024,
+            "line": 561,
+            "column": 19
+          }
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "package": "google.golang.org/grpc/internal/transport",
+          "function": "sendHTTPRequest",
+          "position": {
+            "filename": "internal/transport/proxy.go",
+            "offset": 3522,
+            "line": 112,
+            "column": 21
+          }
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "package": "google.golang.org/grpc/internal/transport",
+          "function": "doHTTPConnectHandshake",
+          "position": {
+            "filename": "internal/transport/proxy.go",
+            "offset": 2015,
+            "line": 74,
+            "column": 27
+          }
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "package": "google.golang.org/grpc/internal/transport",
+          "function": "proxyDial",
+          "position": {
+            "filename": "internal/transport/proxy.go",
+            "offset": 3361,
+            "line": 107,
+            "column": 31
+          }
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "package": "google.golang.org/grpc/internal/transport",
+          "function": "dial",
+          "position": {
+            "filename": "internal/transport/http2_client.go",
+            "offset": 6348,
+            "line": 182,
+            "column": 19
+          }
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "package": "google.golang.org/grpc/internal/transport",
+          "function": "NewHTTP2Client",
+          "position": {
+            "filename": "internal/transport/http2_client.go",
+            "offset": 7660,
+            "line": 221,
+            "column": 19
+          }
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "package": "google.golang.org/grpc",
+          "function": "createTransport",
+          "receiver": "*addrConn",
+          "position": {
+            "filename": "clientconn.go",
+            "offset": 48182,
+            "line": 1407,
+            "column": 40
+          }
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "package": "google.golang.org/grpc",
+          "function": "tryAllAddrs",
+          "receiver": "*addrConn",
+          "position": {
+            "filename": "clientconn.go",
+            "offset": 46430,
+            "line": 1354,
+            "column": 28
+          }
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "package": "google.golang.org/grpc",
+          "function": "resetTransportAndUnlock",
+          "receiver": "*addrConn",
+          "position": {
+            "filename": "clientconn.go",
+            "offset": 44597,
+            "line": 1286,
+            "column": 26
+          }
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "package": "google.golang.org/grpc",
+          "function": "connect",
+          "receiver": "*addrConn",
+          "position": {
+            "filename": "clientconn.go",
+            "offset": 33782,
+            "line": 942,
+            "column": 28
+          }
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "package": "google.golang.org/grpc",
+          "function": "Connect",
+          "receiver": "*acBalancerWrapper",
+          "position": {
+            "filename": "balancer_wrapper.go",
+            "offset": 12195,
+            "line": 354,
+            "column": 2
+          }
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "package": "google.golang.org/grpc/balancer/pickfirst/pickfirstleaf",
+          "function": "requestConnectionLocked",
+          "receiver": "*pickfirstBalancer",
+          "position": {
+            "filename": "balancer/pickfirst/pickfirstleaf/pickfirstleaf.go",
+            "offset": 18726,
+            "line": 522,
+            "column": 22
+          }
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "package": "google.golang.org/grpc/balancer/pickfirst/pickfirstleaf",
+          "function": "startFirstPassLocked",
+          "receiver": "*pickfirstBalancer",
+          "position": {
+            "filename": "balancer/pickfirst/pickfirstleaf/pickfirstleaf.go",
+            "offset": 13203,
+            "line": 365,
+            "column": 27
+          }
+        },
+        {
+          "module": "google.golang.org/grpc",
+          "version": "v1.74.2",
+          "package": "google.golang.org/grpc/balancer/pickfirst/pickfirstleaf",
+          "function": "ExitIdle",
+          "receiver": "*pickfirstBalancer",
+          "position": {
+            "filename": "balancer/pickfirst/pickfirstleaf/pickfirstleaf.go",
+            "offset": 12933,
+            "line": 354,
+            "column": 25
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "sync",
+          "function": "OnceFunc$1$1",
+          "position": {
+            "filename": "src/sync/oncefunc.go",
+            "offset": 842,
+            "line": 33,
+            "column": 7
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "sync",
+          "function": "doSlow",
+          "receiver": "*Once",
+          "position": {
+            "filename": "src/sync/once.go",
+            "offset": 2510,
+            "line": 78,
+            "column": 4
+          }
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "sync",
+          "function": "Do",
+          "receiver": "*Once",
+          "position": {
+            "filename": "src/sync/once.go",
+            "offset": 2383,
+            "line": 69,
+            "column": 11
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/probe",
+          "function": "Stop",
+          "receiver": "*ProbeManager",
+          "position": {
+            "filename": "internal/probe/manager.go",
+            "offset": 7761,
+            "line": 312,
+            "column": 15
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-6613",
+      "summary": "HTTP/1 server connection desynchronization after 2xx CONNECT response in net/http",
+      "url": "https://pkg.go.dev/vuln/GO-2026-6613",
+      "affected": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.26.9"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "Read",
+          "receiver": "*body",
+          "position": {
+            "filename": "src/net/http/transfer.go",
+            "offset": 23957,
+            "line": 831,
+            "column": 16
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/proxy",
+          "function": "Read",
+          "receiver": "*countingReadCloser",
+          "position": {
+            "filename": "internal/proxy/request_log_capture.go",
+            "offset": 2241,
+            "line": 103,
+            "column": 21
+          }
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-6617",
+      "summary": "HTTP/2 server crash due to HPACK encoder race in net/http",
+      "url": "https://pkg.go.dev/vuln/GO-2026-6617",
+      "affected": [
+        {
+          "module": "golang.org/x/net",
+          "version": "v0.50.0",
+          "fixed": "v0.60.0"
+        },
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "fixed": "v1.26.9"
+        }
+      ],
+      "example_trace": [
+        {
+          "module": "stdlib",
+          "version": "v1.25.5",
+          "package": "net/http",
+          "function": "Error",
+          "receiver": "http2connError",
+          "position": {
+            "filename": "src/net/http/h2_bundle.go",
+            "offset": 63663,
+            "line": 1444,
+            "column": 25
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/service",
+          "function": "parseRuntimeConfigPatch",
+          "position": {
+            "filename": "internal/service/control_plane_system.go",
+            "offset": 4872,
+            "line": 144,
+            "column": 54
+          }
+        },
+        {
+          "module": "github.com/Resinat/Resin",
+          "package": "github.com/Resinat/Resin/internal/service",
+          "function": "PatchRuntimeConfig",
+          "receiver": "*ControlPlaneService",
+          "position": {
+            "filename": "internal/service/control_plane_system.go",
+            "offset": 5664,
+            "line": 168,
+            "column": 36
+          }
+        }
+      ]
+    }
+  ]
+}

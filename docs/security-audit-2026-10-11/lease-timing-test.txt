@@ -1,0 +1,23 @@
+--- FAIL: TestRouteRequest_SameIPRotationMissRecreatesLease (0.00s)
+    router_matrix_test.go:306: recreated lease must have new expiry, still got old 1791711054072612700
+--- FAIL: TestRouteRequest_SameIPRotationMissRecreatesLease (0.00s)
+    router_matrix_test.go:306: recreated lease must have new expiry, still got old 1791711054073124600
+--- FAIL: TestRouteRequest_SameIPRotationMissRecreatesLease (0.00s)
+    router_matrix_test.go:306: recreated lease must have new expiry, still got old 1791711054073179500
+--- FAIL: TestRouteRequest_SameIPRotationMissRecreatesLease (0.00s)
+    router_matrix_test.go:306: recreated lease must have new expiry, still got old 1791711054073179500
+--- FAIL: TestRouteRequest_SameIPRotationMissRecreatesLease (0.00s)
+    router_matrix_test.go:306: recreated lease must have new expiry, still got old 1791711054073179500
+--- FAIL: TestRouteRequest_SameIPRotationMissRecreatesLease (0.00s)
+    router_matrix_test.go:306: recreated lease must have new expiry, still got old 1791711054073179500
+--- FAIL: TestRouteRequest_SameIPRotationMissRecreatesLease (0.00s)
+    router_matrix_test.go:306: recreated lease must have new expiry, still got old 1791711054073179500
+--- FAIL: TestRouteRequest_SameIPRotationMissRecreatesLease (0.00s)
+    router_matrix_test.go:306: recreated lease must have new expiry, still got old 1791711054073179500
+--- FAIL: TestRouteRequest_SameIPRotationMissRecreatesLease (0.00s)
+    router_matrix_test.go:306: recreated lease must have new expiry, still got old 1791711054073179500
+--- FAIL: TestRouteRequest_SameIPRotationMissRecreatesLease (0.00s)
+    router_matrix_test.go:306: recreated lease must have new expiry, still got old 1791711054073179500
+FAIL
+FAIL	github.com/Resinat/Resin/internal/routing	0.125s
+FAIL

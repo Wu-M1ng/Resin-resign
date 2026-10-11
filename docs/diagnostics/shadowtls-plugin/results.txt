@@ -1,0 +1,27 @@
+=== RUN   TestDiagnosticShadowTLSPlugin
+=== RUN   TestDiagnosticShadowTLSPlugin/plain_ss
+    diagnostic_shadowtls_plugin_test.go:38: converted: {"method":"aes-128-gcm","password":"ss-fixture","server":"127.0.0.1","server_port":443,"tag":"ss-fixture","type":"shadowsocks"}
+    diagnostic_shadowtls_plugin_test.go:47: build succeeded; no remote connectivity tested
+=== RUN   TestDiagnosticShadowTLSPlugin/clash_shadow_tls_plugin
+    diagnostic_shadowtls_plugin_test.go:38: converted: {"method":"aes-128-gcm","password":"ss-fixture","plugin":"shadow-tls","plugin_opts":"host=fixture.invalid;password=st-fixture;version=3","server":"127.0.0.1","server_port":443,"tag":"ss-fixture","type":"shadowsocks"}
+    diagnostic_shadowtls_plugin_test.go:52: reproduced: outbound build: create outbound [shadowsocks]: plugin not found: shadow-tls
+=== RUN   TestDiagnosticShadowTLSPlugin/uri_shadow_tls_plugin
+    diagnostic_shadowtls_plugin_test.go:38: converted: {"method":"aes-128-gcm","password":"ss-fixture","plugin":"shadow-tls","plugin_opts":"host=fixture.invalid;password=st-fixture;version=3","server":"127.0.0.1","server_port":443,"tag":"shadowsocks-127.0.0.1:443","type":"shadowsocks"}
+    diagnostic_shadowtls_plugin_test.go:52: reproduced: outbound build: create outbound [shadowsocks]: plugin not found: shadow-tls
+=== RUN   TestDiagnosticShadowTLSPlugin/renamed_plugin
+    diagnostic_shadowtls_plugin_test.go:38: converted: {"method":"aes-128-gcm","password":"ss-fixture","plugin":"shadowtls","server":"127.0.0.1","server_port":443,"tag":"ss-fixture","type":"shadowsocks"}
+    diagnostic_shadowtls_plugin_test.go:52: reproduced: outbound build: create outbound [shadowsocks]: plugin not found: shadowtls
+=== RUN   TestDiagnosticShadowTLSPlugin/native_shadowtls
+    diagnostic_shadowtls_plugin_test.go:38: converted: {"type":"shadowtls","tag":"tls-layer","server":"127.0.0.1","server_port":443,"version":3,"password":"st-fixture","tls":{"enabled":true,"server_name":"fixture.invalid"}}
+    diagnostic_shadowtls_plugin_test.go:47: build succeeded; no remote connectivity tested
+=== RUN   TestDiagnosticShadowTLSPlugin/native_chain_requires_registration
+    diagnostic_shadowtls_plugin_test.go:81: reproduced with native pair: outbound detour not found: tls-layer
+--- PASS: TestDiagnosticShadowTLSPlugin (0.00s)
+    --- PASS: TestDiagnosticShadowTLSPlugin/plain_ss (0.00s)
+    --- PASS: TestDiagnosticShadowTLSPlugin/clash_shadow_tls_plugin (0.00s)
+    --- PASS: TestDiagnosticShadowTLSPlugin/uri_shadow_tls_plugin (0.00s)
+    --- PASS: TestDiagnosticShadowTLSPlugin/renamed_plugin (0.00s)
+    --- PASS: TestDiagnosticShadowTLSPlugin/native_shadowtls (0.00s)
+    --- PASS: TestDiagnosticShadowTLSPlugin/native_chain_requires_registration (0.00s)
+PASS
+ok  	github.com/Resinat/Resin/internal/outbound	7.528s

@@ -52,6 +52,7 @@ type SingboxBuilder struct {
 func NewSingboxBuilderWithConfig(cfg SingboxBuilderConfig) (*SingboxBuilder, error) {
 	ctx := context.Background()
 	ctx = include.Context(ctx) // inject protocol registries
+	registerHysteria2Pins(service.FromContext[adapter.OutboundRegistry](ctx).(*sbOutbound.Registry))
 
 	logFactory := log.NewNOPFactory()
 	logger := logFactory.NewLogger("resin-outbound")

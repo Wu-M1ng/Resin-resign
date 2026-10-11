@@ -1,0 +1,29 @@
+=== RUN   TestDiagnosticHY2Fingerprint
+=== RUN   TestDiagnosticHY2Fingerprint/no_fingerprint
+    diagnostic_hy2_fingerprint_test.go:53: converted: {"password":"fixture-only","server":"127.0.0.1","server_port":57328,"tag":"local-diagnostic","tls":{"enabled":true,"server_name":"127.0.0.1"},"type":"hysteria2"}
+    diagnostic_hy2_fingerprint_test.go:67: build succeeded (does not imply remote connectivity)
+=== RUN   TestDiagnosticHY2Fingerprint/reported_fingerprint
+    diagnostic_hy2_fingerprint_test.go:53: converted: {"password":"fixture-only","server":"127.0.0.1","server_port":57328,"tag":"local-diagnostic","tls":{"enabled":true,"server_name":"127.0.0.1","utls":{"enabled":true,"fingerprint":"c083d33c12db8a02d88a5169fb9cee3dae9291fffe38c579891a9dcff55304fb"}},"type":"hysteria2"}
+    diagnostic_hy2_fingerprint_test.go:60: build error reproduced: outbound build: create outbound [hysteria2]: unknown uTLS fingerprint: c083d33c12db8a02d88a5169fb9cee3dae9291fffe38c579891a9dcff55304fb
+=== RUN   TestDiagnosticHY2Fingerprint/valid_sha256_shape
+    diagnostic_hy2_fingerprint_test.go:53: converted: {"password":"fixture-only","server":"127.0.0.1","server_port":57328,"tag":"local-diagnostic","tls":{"enabled":true,"server_name":"127.0.0.1","utls":{"enabled":true,"fingerprint":"abababababababababababababababababababababababababababababababab"}},"type":"hysteria2"}
+    diagnostic_hy2_fingerprint_test.go:60: build error reproduced: outbound build: create outbound [hysteria2]: unknown uTLS fingerprint: abababababababababababababababababababababababababababababababab
+=== RUN   TestDiagnosticHY2Fingerprint/certificate_and_client_fingerprint
+    diagnostic_hy2_fingerprint_test.go:53: converted: {"password":"fixture-only","server":"127.0.0.1","server_port":57328,"tag":"local-diagnostic","tls":{"enabled":true,"server_name":"127.0.0.1","utls":{"enabled":true,"fingerprint":"c083d33c12db8a02d88a5169fb9cee3dae9291fffe38c579891a9dcff55304fb"}},"type":"hysteria2"}
+    diagnostic_hy2_fingerprint_test.go:60: build error reproduced: outbound build: create outbound [hysteria2]: unknown uTLS fingerprint: c083d33c12db8a02d88a5169fb9cee3dae9291fffe38c579891a9dcff55304fb
+=== RUN   TestDiagnosticHY2Fingerprint/client_fingerprint_chrome
+    diagnostic_hy2_fingerprint_test.go:53: converted: {"password":"fixture-only","server":"127.0.0.1","server_port":57328,"tag":"local-diagnostic","tls":{"enabled":true,"server_name":"127.0.0.1","utls":{"enabled":true,"fingerprint":"chrome"}},"type":"hysteria2"}
+    diagnostic_hy2_fingerprint_test.go:67: build succeeded (does not imply remote connectivity)
+    diagnostic_hy2_fingerprint_test.go:78: loopback dial error reproduced: unsupported usage for uTLS
+=== RUN   TestDiagnosticHY2Fingerprint/uri_pin_sha256
+    diagnostic_hy2_fingerprint_test.go:53: converted: {"password":"fixture-only","server":"127.0.0.1","server_port":57328,"tag":"hysteria2-127.0.0.1:57328","tls":{"certificate_public_key_sha256":["abababababababababababababababababababababababababababababababab"],"enabled":true,"server_name":"127.0.0.1"},"type":"hysteria2"}
+    diagnostic_hy2_fingerprint_test.go:60: build error reproduced: outbound build: parse outbound options: tls.certificate_public_key_sha256: json: unknown field "certificate_public_key_sha256"
+--- PASS: TestDiagnosticHY2Fingerprint (0.00s)
+    --- PASS: TestDiagnosticHY2Fingerprint/no_fingerprint (0.00s)
+    --- PASS: TestDiagnosticHY2Fingerprint/reported_fingerprint (0.00s)
+    --- PASS: TestDiagnosticHY2Fingerprint/valid_sha256_shape (0.00s)
+    --- PASS: TestDiagnosticHY2Fingerprint/certificate_and_client_fingerprint (0.00s)
+    --- PASS: TestDiagnosticHY2Fingerprint/client_fingerprint_chrome (0.00s)
+    --- PASS: TestDiagnosticHY2Fingerprint/uri_pin_sha256 (0.00s)
+PASS
+ok  	github.com/Resinat/Resin/internal/outbound	7.666s

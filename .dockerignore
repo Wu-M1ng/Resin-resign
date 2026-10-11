@@ -1,11 +1,48 @@
-.git
-.env
-.agents
-resin
-sing-box-reference
-node_modules
-webui/node_modules
-webui/dist
-.vscode
-*.log
-.data/
+# Version control, editors, and local agent tooling
+.git/
+.github/workflows/
+.vscode/
+.idea/
+.agents/
+.claude/
+.omc/
+.devcontainer/
+.local/
+
+# Local environment files (keep the example configuration)
+**/.env
+**/.env.*
+!**/.env.example
+
+# Frontend dependencies and generated files
+**/node_modules/
+webui/dist/
+**/*.tsbuildinfo
+**/.vite/
+**/coverage/
+
+# Local build outputs and reference checkout
+/resin
+/resin.exe
+/build/
+/dist/
+/sing-box-reference/
+
+# Runtime data and logs
+/.data/
+/data/
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/*.log
+
+# Documentation and local development helpers
+/doc/
+/docs/
+/README*.md
+/DESIGN.md
+/docker-compose.yml.example
+/start-instance.sh
+
+# Keep release-bin/ and .github/Dockerfile.release for release image builds.
+# Keep docker/entrypoint.sh, Go sources/migrations, and frontend build inputs.

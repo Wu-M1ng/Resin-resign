@@ -1,0 +1,8 @@
+=== RUN   TestDiagnosticHY2Fingerprint
+=== RUN   TestDiagnosticHY2Fingerprint/native_public_key_pin
+    diagnostic_hy2_fingerprint_test.go:54: converted: {"type":"hysteria2","tag":"local-public-key-pin","server":"127.0.0.1","domain_resolver":"local","server_ports":["60000:63000"],"password":"fixture-only","tls":{"enabled":true,"insecure":true,"server_name":"fixture.invalid","certificate_public_key_sha256":["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="]}}
+    diagnostic_hy2_fingerprint_test.go:61: build error reproduced: outbound build: parse outbound options: tls.certificate_public_key_sha256: json: unknown field "certificate_public_key_sha256"
+--- PASS: TestDiagnosticHY2Fingerprint (0.00s)
+    --- PASS: TestDiagnosticHY2Fingerprint/native_public_key_pin (0.00s)
+PASS
+ok  	github.com/Resinat/Resin/internal/outbound	7.494s

@@ -1,0 +1,32 @@
+package netutil
+
+import (
+	"compress/gzip"
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+)
+
+func TestAuditDownloaderBuffersDecodedResponse(t *testing.T) {
+	// 小规模验证解压后响应被完整读入内存；不做资源耗尽测试。
+	const size = 2 * 1024 * 1024
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Encoding", "gzip")
+		zw := gzip.NewWriter(w)
+		_, _ = zw.Write([]byte(strings.Repeat("x", size)))
+		_ = zw.Close()
+	}))
+	defer upstream.Close()
+	d := NewDirectDownloader(func() time.Duration { return 5 * time.Second }, func() string { return "resin-local-audit" })
+	body, err := d.Download(context.Background(), upstream.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(body) != size {
+		t.Fatalf("got %d bytes, want %d", len(body), size)
+	}
+	t.Logf("小型 gzip 响应解压后的 %d 字节被完整保存在返回切片中；大小上限缺失由源码确认", len(body))
+}

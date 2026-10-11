@@ -1,0 +1,8 @@
+=== RUN   TestAuthMiddleware_EmptyConfiguredToken_DisablesAuth
+--- PASS: TestAuthMiddleware_EmptyConfiguredToken_DisablesAuth (0.00s)
+PASS
+ok  	github.com/Resinat/Resin/internal/api	0.691s
+=== RUN   TestLoadEnvConfig_EmptyTokensAllowedWhenDefined
+--- PASS: TestLoadEnvConfig_EmptyTokensAllowedWhenDefined (0.00s)
+PASS
+ok  	github.com/Resinat/Resin/internal/config	0.601s

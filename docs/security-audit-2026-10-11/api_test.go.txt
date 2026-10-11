@@ -1,0 +1,41 @@
+package api
+
+import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+)
+
+// 仅用本地请求对象验证限流，不向外部服务发送请求。
+func TestAuditFeedLimiterTrustsUnverifiedRealIP(t *testing.T) {
+	limiter := newPublicFeedRateLimiter(2, time.Minute)
+	for i := 0; i < 4; i++ {
+		r := httptest.NewRequest(http.MethodGet, "/sub/fixture", nil)
+		r.RemoteAddr = "127.0.0.1:12345"
+		r.Header.Set("X-Real-IP", fmt.Sprintf("192.0.2.%d", i+1))
+		if allowed, _ := limiter.allow(r, fmt.Sprintf("invalid-fixture-%d", i)); !allowed {
+			t.Fatalf("request %d unexpectedly limited", i)
+		}
+	}
+	t.Log("同一 RemoteAddr 更换 X-Real-IP 和无效 token 后，4/4 请求通过 limit=2 的限流器")
+}
+
+func TestAuditRejectedFeedRequestsGrowBuckets(t *testing.T) {
+	limiter := newPublicFeedRateLimiter(1, time.Minute)
+	r := httptest.NewRequest(http.MethodGet, "/sub/fixture", nil)
+	r.RemoteAddr = "127.0.0.1:12345"
+	if allowed, _ := limiter.allow(r, "first-fixture"); !allowed {
+		t.Fatal("initial request rejected")
+	}
+	for i := 0; i < 8; i++ {
+		if allowed, _ := limiter.allow(r, fmt.Sprintf("rejected-fixture-%d", i)); allowed {
+			t.Fatal("IP limit should reject later requests")
+		}
+	}
+	if got := len(limiter.buckets); got != 10 {
+		t.Fatalf("bucket count = %d, want 10", got)
+	}
+	t.Log("8 次被拒绝请求仍新建 8 个 token bucket；同一时间窗口内无容量上限")
+}

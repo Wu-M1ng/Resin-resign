@@ -1,0 +1,8 @@
+{
+  "Replace": {
+    "E:\\Cursor\\Resin\\cmd\\resin\\resin_security_audit_test.go": "E:\\Cursor\\Resin\\docs\\security-audit-2026-10-11\\runtime_test.go.txt",
+    "E:\\Cursor\\Resin\\internal\\proxy\\resin_security_audit_test.go": "E:\\Cursor\\Resin\\docs\\security-audit-2026-10-11\\proxy_test.go.txt",
+    "E:\\Cursor\\Resin\\internal\\api\\resin_security_audit_test.go": "E:\\Cursor\\Resin\\docs\\security-audit-2026-10-11\\api_test.go.txt",
+    "E:\\Cursor\\Resin\\internal\\netutil\\resin_security_audit_test.go": "E:\\Cursor\\Resin\\docs\\security-audit-2026-10-11\\netutil_test.go.txt"
+  }
+}

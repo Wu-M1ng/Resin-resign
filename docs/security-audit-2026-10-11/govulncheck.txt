@@ -1,0 +1,351 @@
+=== Symbol Results ===
+
+Vulnerability #1: GO-2026-6617
+    HTTP/2 server crash due to HPACK encoder race in net/http
+  More info: https://pkg.go.dev/vuln/GO-2026-6617
+  Module: golang.org/x/net
+    Found in: golang.org/x/net@v0.50.0
+    Fixed in: golang.org/x/net@v0.60.0
+    Example traces found:
+      #1: internal/outbound/builder.go:156:20: outbound.SingboxBuilder.Build calls common.Close, which calls http2.ClientConn.Close
+      #2: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.ConnectionError.Error
+      #3: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.ErrCode.String
+      #4: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.FrameHeader.String
+      #5: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.FrameType.String
+      #6: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.FrameWriteRequest.String
+      #7: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.ReadFrame
+      #8: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteContinuation
+      #9: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteData
+      #10: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteGoAway
+      #11: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteHeaders
+      #12: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WritePing
+      #13: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteRSTStream
+      #14: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteSettings
+      #15: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteSettingsAck
+      #16: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteWindowUpdate
+      #17: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.GoAwayError.Error
+      #18: internal/api/server.go:193:36: api.Server.ListenAndServe calls http.Server.ListenAndServe, which eventually calls http2.Server.ServeConn
+      #19: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.Setting.String
+      #20: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.SettingID.String
+      #21: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.SettingsFrame.ForeachSetting
+      #22: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.StreamError.Error
+      #23: internal/outbound/secure_dns.go:343:37: outbound.secureDNSFailoverTransport.Exchange calls transport.HTTPSTransport.Exchange, which eventually calls http2.Transport.CloseIdleConnections
+      #24: internal/outbound/secure_dns.go:343:37: outbound.secureDNSFailoverTransport.Exchange calls transport.HTTPSTransport.Exchange, which eventually calls http2.Transport.RoundTrip
+      #25: internal/proxy/forward.go:393:27: proxy.ForwardProxy.handleCONNECT calls bufio.Writer.Flush, which calls http2.bufferedWriterTimeoutWriter.Write
+      #26: internal/proxy/forward.go:393:27: proxy.ForwardProxy.handleCONNECT calls bufio.Writer.Flush, which calls http2.chunkWriter.Write
+      #27: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.connError.Error
+      #28: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.duplicatePseudoHeaderError.Error
+      #29: internal/proxy/request_log_capture.go:111:19: proxy.countingReadCloser.Close calls http2.gzipReader.Close
+      #30: internal/proxy/request_log_capture.go:103:21: proxy.countingReadCloser.Read calls http2.gzipReader.Read
+      #31: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.headerFieldNameError.Error
+      #32: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.headerFieldValueError.Error
+      #33: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.pseudoHeaderError.Error
+      #34: internal/proxy/request_log_capture.go:111:19: proxy.countingReadCloser.Close calls http2.requestBody.Close
+      #35: internal/proxy/request_log_capture.go:103:21: proxy.countingReadCloser.Read calls http2.requestBody.Read
+      #36: internal/proxy/reverse.go:419:17: proxy.ReverseProxy.ServeHTTP calls httputil.ReverseProxy.ServeHTTP, which eventually calls http2.responseWriter.Flush
+      #37: internal/proxy/reverse.go:419:17: proxy.ReverseProxy.ServeHTTP calls httputil.ReverseProxy.ServeHTTP, which eventually calls http2.responseWriter.FlushError
+      #38: internal/api/server.go:193:36: api.Server.ListenAndServe calls http.Server.ListenAndServe, which eventually calls http2.responseWriter.SetWriteDeadline
+      #39: internal/api/response.go:13:31: api.WriteJSON calls json.Encoder.Encode, which calls http2.responseWriter.Write
+      #40: internal/api/response.go:12:15: api.WriteJSON calls http2.responseWriter.WriteHeader
+      #41: internal/proxy/forward.go:385:36: proxy.ForwardProxy.handleCONNECT calls bufio.Writer.WriteString, which calls http2.responseWriter.WriteString
+      #42: internal/proxy/forward.go:393:27: proxy.ForwardProxy.handleCONNECT calls bufio.Writer.Flush, which calls http2.stickyErrWriter.Write
+      #43: internal/proxy/request_log_capture.go:111:19: proxy.countingReadCloser.Close calls http2.transportResponseBody.Close
+      #44: internal/proxy/request_log_capture.go:103:21: proxy.countingReadCloser.Read calls http2.transportResponseBody.Read
+      #45: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.writeData.String
+
+Vulnerability #2: GO-2026-6612
+    Double flow control refund on HTTP/2 server streams in net/http
+  More info: https://pkg.go.dev/vuln/GO-2026-6612
+  Module: golang.org/x/net
+    Found in: golang.org/x/net@v0.50.0
+    Fixed in: golang.org/x/net@v0.60.0
+    Example traces found:
+      #1: internal/outbound/builder.go:156:20: outbound.SingboxBuilder.Build calls common.Close, which calls http2.ClientConn.Close
+      #2: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.ConnectionError.Error
+      #3: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.ErrCode.String
+      #4: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.FrameHeader.String
+      #5: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.FrameType.String
+      #6: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.FrameWriteRequest.String
+      #7: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.ReadFrame
+      #8: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteContinuation
+      #9: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteData
+      #10: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteGoAway
+      #11: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteHeaders
+      #12: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WritePing
+      #13: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteRSTStream
+      #14: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteSettings
+      #15: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteSettingsAck
+      #16: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteWindowUpdate
+      #17: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.GoAwayError.Error
+      #18: internal/api/server.go:193:36: api.Server.ListenAndServe calls http.Server.ListenAndServe, which eventually calls http2.Server.ServeConn
+      #19: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.Setting.String
+      #20: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.SettingID.String
+      #21: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.SettingsFrame.ForeachSetting
+      #22: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.StreamError.Error
+      #23: internal/outbound/secure_dns.go:343:37: outbound.secureDNSFailoverTransport.Exchange calls transport.HTTPSTransport.Exchange, which eventually calls http2.Transport.CloseIdleConnections
+      #24: internal/outbound/secure_dns.go:343:37: outbound.secureDNSFailoverTransport.Exchange calls transport.HTTPSTransport.Exchange, which eventually calls http2.Transport.RoundTrip
+      #25: internal/proxy/forward.go:393:27: proxy.ForwardProxy.handleCONNECT calls bufio.Writer.Flush, which calls http2.bufferedWriterTimeoutWriter.Write
+      #26: internal/proxy/forward.go:393:27: proxy.ForwardProxy.handleCONNECT calls bufio.Writer.Flush, which calls http2.chunkWriter.Write
+      #27: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.connError.Error
+      #28: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.duplicatePseudoHeaderError.Error
+      #29: internal/proxy/request_log_capture.go:111:19: proxy.countingReadCloser.Close calls http2.gzipReader.Close
+      #30: internal/proxy/request_log_capture.go:103:21: proxy.countingReadCloser.Read calls http2.gzipReader.Read
+      #31: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.headerFieldNameError.Error
+      #32: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.headerFieldValueError.Error
+      #33: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.pseudoHeaderError.Error
+      #34: internal/proxy/request_log_capture.go:111:19: proxy.countingReadCloser.Close calls http2.requestBody.Close
+      #35: internal/proxy/request_log_capture.go:103:21: proxy.countingReadCloser.Read calls http2.requestBody.Read
+      #36: internal/proxy/reverse.go:419:17: proxy.ReverseProxy.ServeHTTP calls httputil.ReverseProxy.ServeHTTP, which eventually calls http2.responseWriter.Flush
+      #37: internal/proxy/reverse.go:419:17: proxy.ReverseProxy.ServeHTTP calls httputil.ReverseProxy.ServeHTTP, which eventually calls http2.responseWriter.FlushError
+      #38: internal/api/server.go:193:36: api.Server.ListenAndServe calls http.Server.ListenAndServe, which eventually calls http2.responseWriter.SetWriteDeadline
+      #39: internal/api/response.go:13:31: api.WriteJSON calls json.Encoder.Encode, which calls http2.responseWriter.Write
+      #40: internal/api/response.go:12:15: api.WriteJSON calls http2.responseWriter.WriteHeader
+      #41: internal/proxy/forward.go:385:36: proxy.ForwardProxy.handleCONNECT calls bufio.Writer.WriteString, which calls http2.responseWriter.WriteString
+      #42: internal/proxy/forward.go:393:27: proxy.ForwardProxy.handleCONNECT calls bufio.Writer.Flush, which calls http2.stickyErrWriter.Write
+      #43: internal/proxy/request_log_capture.go:111:19: proxy.countingReadCloser.Close calls http2.transportResponseBody.Close
+      #44: internal/proxy/request_log_capture.go:103:21: proxy.countingReadCloser.Read calls http2.transportResponseBody.Read
+      #45: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.writeData.String
+
+Vulnerability #3: GO-2026-6611
+    Excessive CPU consumption from repeated initial window changes in net/http
+  More info: https://pkg.go.dev/vuln/GO-2026-6611
+  Module: golang.org/x/net
+    Found in: golang.org/x/net@v0.50.0
+    Fixed in: golang.org/x/net@v0.60.0
+    Example traces found:
+      #1: internal/outbound/builder.go:156:20: outbound.SingboxBuilder.Build calls common.Close, which calls http2.ClientConn.Close
+      #2: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.ConnectionError.Error
+      #3: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.ErrCode.String
+      #4: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.FrameHeader.String
+      #5: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.FrameType.String
+      #6: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.FrameWriteRequest.String
+      #7: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.ReadFrame
+      #8: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteContinuation
+      #9: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteData
+      #10: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteGoAway
+      #11: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteHeaders
+      #12: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WritePing
+      #13: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteRSTStream
+      #14: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteSettings
+      #15: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteSettingsAck
+      #16: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteWindowUpdate
+      #17: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.GoAwayError.Error
+      #18: internal/api/server.go:193:36: api.Server.ListenAndServe calls http.Server.ListenAndServe, which eventually calls http2.Server.ServeConn
+      #19: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.Setting.String
+      #20: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.SettingID.String
+      #21: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.SettingsFrame.ForeachSetting
+      #22: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.StreamError.Error
+      #23: internal/outbound/secure_dns.go:343:37: outbound.secureDNSFailoverTransport.Exchange calls transport.HTTPSTransport.Exchange, which eventually calls http2.Transport.CloseIdleConnections
+      #24: internal/outbound/secure_dns.go:343:37: outbound.secureDNSFailoverTransport.Exchange calls transport.HTTPSTransport.Exchange, which eventually calls http2.Transport.RoundTrip
+      #25: internal/proxy/forward.go:393:27: proxy.ForwardProxy.handleCONNECT calls bufio.Writer.Flush, which calls http2.bufferedWriterTimeoutWriter.Write
+      #26: internal/proxy/forward.go:393:27: proxy.ForwardProxy.handleCONNECT calls bufio.Writer.Flush, which calls http2.chunkWriter.Write
+      #27: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.connError.Error
+      #28: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.duplicatePseudoHeaderError.Error
+      #29: internal/proxy/request_log_capture.go:111:19: proxy.countingReadCloser.Close calls http2.gzipReader.Close
+      #30: internal/proxy/request_log_capture.go:103:21: proxy.countingReadCloser.Read calls http2.gzipReader.Read
+      #31: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.headerFieldNameError.Error
+      #32: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.headerFieldValueError.Error
+      #33: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.pseudoHeaderError.Error
+      #34: internal/proxy/request_log_capture.go:111:19: proxy.countingReadCloser.Close calls http2.requestBody.Close
+      #35: internal/proxy/request_log_capture.go:103:21: proxy.countingReadCloser.Read calls http2.requestBody.Read
+      #36: internal/proxy/reverse.go:419:17: proxy.ReverseProxy.ServeHTTP calls httputil.ReverseProxy.ServeHTTP, which eventually calls http2.responseWriter.Flush
+      #37: internal/proxy/reverse.go:419:17: proxy.ReverseProxy.ServeHTTP calls httputil.ReverseProxy.ServeHTTP, which eventually calls http2.responseWriter.FlushError
+      #38: internal/api/server.go:193:36: api.Server.ListenAndServe calls http.Server.ListenAndServe, which eventually calls http2.responseWriter.SetWriteDeadline
+      #39: internal/api/response.go:13:31: api.WriteJSON calls json.Encoder.Encode, which calls http2.responseWriter.Write
+      #40: internal/api/response.go:12:15: api.WriteJSON calls http2.responseWriter.WriteHeader
+      #41: internal/proxy/forward.go:385:36: proxy.ForwardProxy.handleCONNECT calls bufio.Writer.WriteString, which calls http2.responseWriter.WriteString
+      #42: internal/proxy/forward.go:393:27: proxy.ForwardProxy.handleCONNECT calls bufio.Writer.Flush, which calls http2.stickyErrWriter.Write
+      #43: internal/proxy/request_log_capture.go:111:19: proxy.countingReadCloser.Close calls http2.transportResponseBody.Close
+      #44: internal/proxy/request_log_capture.go:103:21: proxy.countingReadCloser.Read calls http2.transportResponseBody.Read
+      #45: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.writeData.String
+
+Vulnerability #4: GO-2026-6610
+    HTTP/2 transport accepts malformed framing-related headers in net/http
+  More info: https://pkg.go.dev/vuln/GO-2026-6610
+  Module: golang.org/x/net
+    Found in: golang.org/x/net@v0.50.0
+    Fixed in: golang.org/x/net@v0.60.0
+    Example traces found:
+      #1: internal/outbound/secure_dns.go:343:37: outbound.secureDNSFailoverTransport.Exchange calls transport.HTTPSTransport.Exchange, which eventually calls http2.Transport.RoundTrip
+
+Vulnerability #5: GO-2026-6603
+    HTTP/2 server memory exhaustion due to Trailer headers in net/http
+  More info: https://pkg.go.dev/vuln/GO-2026-6603
+  Module: golang.org/x/net
+    Found in: golang.org/x/net@v0.50.0
+    Fixed in: golang.org/x/net@v0.60.0
+    Example traces found:
+      #1: internal/outbound/builder.go:156:20: outbound.SingboxBuilder.Build calls common.Close, which calls http2.ClientConn.Close
+      #2: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.ConnectionError.Error
+      #3: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.ErrCode.String
+      #4: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.FrameHeader.String
+      #5: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.FrameType.String
+      #6: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.FrameWriteRequest.String
+      #7: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.ReadFrame
+      #8: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteContinuation
+      #9: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteData
+      #10: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteGoAway
+      #11: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteHeaders
+      #12: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WritePing
+      #13: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteRSTStream
+      #14: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteSettings
+      #15: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteSettingsAck
+      #16: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteWindowUpdate
+      #17: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.GoAwayError.Error
+      #18: internal/api/server.go:193:36: api.Server.ListenAndServe calls http.Server.ListenAndServe, which eventually calls http2.Server.ServeConn
+      #19: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.Setting.String
+      #20: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.SettingID.String
+      #21: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.SettingsFrame.ForeachSetting
+      #22: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.StreamError.Error
+      #23: internal/outbound/secure_dns.go:343:37: outbound.secureDNSFailoverTransport.Exchange calls transport.HTTPSTransport.Exchange, which eventually calls http2.Transport.CloseIdleConnections
+      #24: internal/outbound/secure_dns.go:343:37: outbound.secureDNSFailoverTransport.Exchange calls transport.HTTPSTransport.Exchange, which eventually calls http2.Transport.RoundTrip
+      #25: internal/proxy/forward.go:393:27: proxy.ForwardProxy.handleCONNECT calls bufio.Writer.Flush, which calls http2.bufferedWriterTimeoutWriter.Write
+      #26: internal/proxy/forward.go:393:27: proxy.ForwardProxy.handleCONNECT calls bufio.Writer.Flush, which calls http2.chunkWriter.Write
+      #27: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.connError.Error
+      #28: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.duplicatePseudoHeaderError.Error
+      #29: internal/proxy/request_log_capture.go:111:19: proxy.countingReadCloser.Close calls http2.gzipReader.Close
+      #30: internal/proxy/request_log_capture.go:103:21: proxy.countingReadCloser.Read calls http2.gzipReader.Read
+      #31: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.headerFieldNameError.Error
+      #32: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.headerFieldValueError.Error
+      #33: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.pseudoHeaderError.Error
+      #34: internal/proxy/request_log_capture.go:111:19: proxy.countingReadCloser.Close calls http2.requestBody.Close
+      #35: internal/proxy/request_log_capture.go:103:21: proxy.countingReadCloser.Read calls http2.requestBody.Read
+      #36: internal/proxy/reverse.go:419:17: proxy.ReverseProxy.ServeHTTP calls httputil.ReverseProxy.ServeHTTP, which eventually calls http2.responseWriter.Flush
+      #37: internal/proxy/reverse.go:419:17: proxy.ReverseProxy.ServeHTTP calls httputil.ReverseProxy.ServeHTTP, which eventually calls http2.responseWriter.FlushError
+      #38: internal/api/server.go:193:36: api.Server.ListenAndServe calls http.Server.ListenAndServe, which eventually calls http2.responseWriter.SetWriteDeadline
+      #39: internal/api/response.go:13:31: api.WriteJSON calls json.Encoder.Encode, which calls http2.responseWriter.Write
+      #40: internal/api/response.go:12:15: api.WriteJSON calls http2.responseWriter.WriteHeader
+      #41: internal/proxy/forward.go:385:36: proxy.ForwardProxy.handleCONNECT calls bufio.Writer.WriteString, which calls http2.responseWriter.WriteString
+      #42: internal/proxy/forward.go:393:27: proxy.ForwardProxy.handleCONNECT calls bufio.Writer.Flush, which calls http2.stickyErrWriter.Write
+      #43: internal/proxy/request_log_capture.go:111:19: proxy.countingReadCloser.Close calls http2.transportResponseBody.Close
+      #44: internal/proxy/request_log_capture.go:103:21: proxy.countingReadCloser.Read calls http2.transportResponseBody.Read
+      #45: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.writeData.String
+
+Vulnerability #6: GO-2026-6348
+    Heap Memory Exhaustion (OOM) via HTTP/2 DATA Frame Fragmentation in
+    google.golang.org/grpc
+  More info: https://pkg.go.dev/vuln/GO-2026-6348
+  Module: google.golang.org/grpc
+    Found in: google.golang.org/grpc@v1.74.2
+    Fixed in: google.golang.org/grpc@v1.83.1
+    Example traces found:
+      #1: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls mem.Copy
+      #2: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls transport.NewHTTP2Client
+      #3: internal/outbound/builder.go:156:20: outbound.SingboxBuilder.Build calls common.Close, which eventually calls transport.http2Client.Close
+      #4: internal/outbound/builder.go:156:20: outbound.SingboxBuilder.Build calls common.Close, which eventually calls transport.http2Client.GracefulClose
+
+Vulnerability #7: GO-2026-6061
+    Vulnerabilities in the xDS RBAC authorization engine and the HTTP/2
+    transport server implementation in google.golang.org/grpc
+  More info: https://pkg.go.dev/vuln/GO-2026-6061
+  Module: google.golang.org/grpc
+    Found in: google.golang.org/grpc@v1.74.2
+    Fixed in: google.golang.org/grpc@v1.82.1
+    Example traces found:
+      #1: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls transport.NewHTTP2Client
+      #2: internal/outbound/builder.go:156:20: outbound.SingboxBuilder.Build calls common.Close, which eventually calls transport.http2Client.Close
+      #3: internal/outbound/builder.go:156:20: outbound.SingboxBuilder.Build calls common.Close, which eventually calls transport.http2Client.GracefulClose
+
+Vulnerability #8: GO-2026-5970
+    Infinite loop on invalid input in golang.org/x/text
+  More info: https://pkg.go.dev/vuln/GO-2026-5970
+  Module: golang.org/x/text
+    Found in: golang.org/x/text@v0.34.0
+    Fixed in: golang.org/x/text@v0.39.0
+    Example traces found:
+      #1: internal/outbound/secure_dns.go:343:37: outbound.secureDNSFailoverTransport.Exchange calls transport.HTTPSTransport.Exchange, which eventually calls norm.Form.Bytes
+      #2: internal/outbound/secure_dns.go:343:37: outbound.secureDNSFailoverTransport.Exchange calls transport.HTTPSTransport.Exchange, which eventually calls norm.Form.IsNormalString
+      #3: internal/outbound/secure_dns.go:343:37: outbound.secureDNSFailoverTransport.Exchange calls transport.HTTPSTransport.Exchange, which eventually calls norm.Form.QuickSpan
+      #4: internal/outbound/secure_dns.go:343:37: outbound.secureDNSFailoverTransport.Exchange calls transport.HTTPSTransport.Exchange, which eventually calls norm.Form.String
+
+Vulnerability #9: GO-2026-5026
+    Invoking failure to reject ASCII-only Punycode-encoded labels in
+    golang.org/x/net/idna
+  More info: https://pkg.go.dev/vuln/GO-2026-5026
+  Module: golang.org/x/net
+    Found in: golang.org/x/net@v0.50.0
+    Fixed in: golang.org/x/net@v0.55.0
+    Example traces found:
+      #1: internal/outbound/secure_dns.go:343:37: outbound.secureDNSFailoverTransport.Exchange calls transport.HTTPSTransport.Exchange, which eventually calls idna.ToASCII
+
+Vulnerability #10: GO-2026-5018
+    Invoking pathological RSA/DSA parameters may cause DoS in
+    golang.org/x/crypto/ssh
+  More info: https://pkg.go.dev/vuln/GO-2026-5018
+  Module: golang.org/x/crypto
+    Found in: golang.org/x/crypto@v0.48.0
+    Fixed in: golang.org/x/crypto@v0.52.0
+    Example traces found:
+      #1: internal/outbound/builder.go:141:38: outbound.SingboxBuilder.Build calls outbound.Registry.CreateOutbound, which eventually calls ssh.ParseAuthorizedKey
+      #2: internal/outbound/builder.go:141:38: outbound.SingboxBuilder.Build calls outbound.Registry.CreateOutbound, which eventually calls ssh.ParsePrivateKey
+      #3: internal/outbound/builder.go:141:38: outbound.SingboxBuilder.Build calls outbound.Registry.CreateOutbound, which eventually calls ssh.ParsePrivateKeyWithPassphrase
+
+Vulnerability #11: GO-2026-4918
+    Infinite loop in HTTP/2 transport when given bad SETTINGS_MAX_FRAME_SIZE in
+    net/http/internal/http2 in golang.org/x/net
+  More info: https://pkg.go.dev/vuln/GO-2026-4918
+  Module: golang.org/x/net
+    Found in: golang.org/x/net@v0.50.0
+    Fixed in: golang.org/x/net@v0.53.0
+    Example traces found:
+      #1: internal/outbound/secure_dns.go:343:37: outbound.secureDNSFailoverTransport.Exchange calls transport.HTTPSTransport.Exchange, which eventually calls http2.Transport.RoundTrip
+
+Vulnerability #12: GO-2026-4559
+    Sending certain HTTP/2 frames can cause a server to panic in
+    golang.org/x/net
+  More info: https://pkg.go.dev/vuln/GO-2026-4559
+  Module: golang.org/x/net
+    Found in: golang.org/x/net@v0.50.0
+    Fixed in: golang.org/x/net@v0.51.0
+    Example traces found:
+      #1: internal/outbound/builder.go:156:20: outbound.SingboxBuilder.Build calls common.Close, which calls http2.ClientConn.Close
+      #2: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.ConnectionError.Error
+      #3: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.ErrCode.String
+      #4: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.FrameHeader.String
+      #5: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.FrameType.String
+      #6: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.FrameWriteRequest.String
+      #7: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.ReadFrame
+      #8: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteContinuation
+      #9: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteData
+      #10: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteGoAway
+      #11: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteHeaders
+      #12: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WritePing
+      #13: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteRSTStream
+      #14: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteSettings
+      #15: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteSettingsAck
+      #16: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.Framer.WriteWindowUpdate
+      #17: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.GoAwayError.Error
+      #18: internal/api/server.go:193:36: api.Server.ListenAndServe calls http.Server.ListenAndServe, which eventually calls http2.Server.ServeConn
+      #19: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.Setting.String
+      #20: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.SettingID.String
+      #21: internal/probe/manager.go:312:15: probe.ProbeManager.Stop calls sync.Once.Do, which eventually calls http2.SettingsFrame.ForeachSetting
+      #22: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.StreamError.Error
+      #23: internal/outbound/secure_dns.go:343:37: outbound.secureDNSFailoverTransport.Exchange calls transport.HTTPSTransport.Exchange, which eventually calls http2.Transport.CloseIdleConnections
+      #24: internal/outbound/secure_dns.go:343:37: outbound.secureDNSFailoverTransport.Exchange calls transport.HTTPSTransport.Exchange, which eventually calls http2.Transport.RoundTrip
+      #25: internal/proxy/forward.go:393:27: proxy.ForwardProxy.handleCONNECT calls bufio.Writer.Flush, which calls http2.bufferedWriterTimeoutWriter.Write
+      #26: internal/proxy/forward.go:393:27: proxy.ForwardProxy.handleCONNECT calls bufio.Writer.Flush, which calls http2.chunkWriter.Write
+      #27: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.connError.Error
+      #28: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.duplicatePseudoHeaderError.Error
+      #29: internal/proxy/request_log_capture.go:111:19: proxy.countingReadCloser.Close calls http2.gzipReader.Close
+      #30: internal/proxy/request_log_capture.go:103:21: proxy.countingReadCloser.Read calls http2.gzipReader.Read
+      #31: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.headerFieldNameError.Error
+      #32: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.headerFieldValueError.Error
+      #33: internal/service/control_plane_system.go:144:54: service.parseRuntimeConfigPatch calls http2.pseudoHeaderError.Error
+      #34: internal/proxy/request_log_capture.go:111:19: proxy.countingReadCloser.Close calls http2.requestBody.Close
+      #35: internal/proxy/request_log_capture.go:103:21: proxy.countingReadCloser.Read calls http2.requestBody.Read
+      #36: internal/proxy/reverse.go:419:17: proxy.ReverseProxy.ServeHTTP calls httputil.ReverseProxy.ServeHTTP, which eventually calls http2.responseWriter.Flush
+      #37: internal/proxy/reverse.go:419:17: proxy.ReverseProxy.ServeHTTP calls httputil.ReverseProxy.ServeHTTP, which eventually calls http2.responseWriter.FlushError
+      #38: internal/api/server.go:193:36: api.Server.ListenAndServe calls http.Server.ListenAndServe, which eventually calls http2.responseWriter.SetWriteDeadline
+      #39: internal/api/response.go:13:31: api.WriteJSON calls json.Encoder.Encode, which calls http2.responseWriter.Write
+      #40: internal/api/response.go:12:15: api.WriteJSON calls http2.responseWriter.WriteHeader
+      #41: internal/proxy/forward.go:385:36: proxy.ForwardProxy.handleCONNECT calls bufio.Writer.WriteString, which calls http2.responseWriter.WriteString
+      #42: internal/proxy/forward.go:393:27: proxy.ForwardProxy.handleCONNECT calls bufio.Writer.Flush, which calls http2.stickyErrWriter.Write
+      #43: internal/proxy/request_log_capture.go:111:19: proxy.countingReadCloser.Close calls http2.transportResponseBody.Close
+      #44: internal/proxy/request_log_capture.go:103:21: proxy.countingReadCloser.Read calls http2.transportResponseBody.Read
+      #45: internal/outbound/builder.go:111:27: outbound.NewSingboxBuilderWithConfig calls dns.Router.Start, which eventually calls http2.writeData.String
+
+Your code is affected by 12 vulnerabilities from 4 modules.
+This scan also found 14 vulnerabilities in packages you import and 20
+vulnerabilities in modules you require, but your code doesn't appear to call
+these vulnerabilities.
+Use '-show verbose' for more details.

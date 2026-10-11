@@ -1,0 +1,30 @@
+ok  	github.com/Resinat/Resin/cmd/resin	6.719s
+ok  	github.com/Resinat/Resin/internal/api	13.144s
+?   	github.com/Resinat/Resin/internal/buildinfo	[no test files]
+ok  	github.com/Resinat/Resin/internal/config	0.266s
+ok  	github.com/Resinat/Resin/internal/feed	0.246s
+ok  	github.com/Resinat/Resin/internal/geoip	0.286s
+ok  	github.com/Resinat/Resin/internal/metrics	5.920s
+?   	github.com/Resinat/Resin/internal/model	[no test files]
+ok  	github.com/Resinat/Resin/internal/netutil	0.727s
+ok  	github.com/Resinat/Resin/internal/node	0.412s
+ok  	github.com/Resinat/Resin/internal/outbound	0.643s
+ok  	github.com/Resinat/Resin/internal/platform	0.225s
+ok  	github.com/Resinat/Resin/internal/probe	0.989s
+--- FAIL: TestPumpPreparedTunnelReader_ClientReadResetAfterIngressDoesNotFail (0.00s)
+    tunnel_test.go:181: netOK: got false, want true (stage="connect_client_to_upstream_copy" err=writeto tcp 127.0.0.1:54223->127.0.0.1:54224: readfrom tcp 127.0.0.1:54225->127.0.0.1:54226: read tcp 127.0.0.1:54223->127.0.0.1:54224: wsarecv: An existing connection was forcibly closed by the remote host.)
+FAIL
+FAIL	github.com/Resinat/Resin/internal/proxy	2.751s
+ok  	github.com/Resinat/Resin/internal/requestlog	6.923s
+--- FAIL: TestRouteRequest_SameIPRotationMissRecreatesLease (0.00s)
+    router_matrix_test.go:306: recreated lease must have new expiry, still got old 1791710946562375200
+FAIL
+FAIL	github.com/Resinat/Resin/internal/routing	0.731s
+?   	github.com/Resinat/Resin/internal/scanloop	[no test files]
+ok  	github.com/Resinat/Resin/internal/service	16.352s
+ok  	github.com/Resinat/Resin/internal/state	9.221s
+ok  	github.com/Resinat/Resin/internal/subscription	0.129s
+?   	github.com/Resinat/Resin/internal/testutil	[no test files]
+ok  	github.com/Resinat/Resin/internal/topology	4.357s
+?   	github.com/Resinat/Resin/webui	[no test files]
+FAIL

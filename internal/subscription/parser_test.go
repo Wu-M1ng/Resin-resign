@@ -988,7 +988,7 @@ func TestParseGeneralSubscription_ClashJSON_Hysteria2AdvancedFields(t *testing.T
 				"obfs": "salamander",
 				"obfs-password": "obfs-secret",
 				"hop-interval": 12,
-				"fingerprint": "firefox",
+				"fingerprint": "c083d33c12db8a02d88a5169fb9cee3dae9291fffe38c579891a9dcff55304fb",
 				"ca": "/etc/ssl/certs/hy2.pem",
 				"ca-str": "-----BEGIN CERTIFICATE-----XYZ"
 			}
@@ -1035,9 +1035,12 @@ func TestParseGeneralSubscription_ClashJSON_Hysteria2AdvancedFields(t *testing.T
 	if !containsAnyString(certificates, "-----BEGIN CERTIFICATE-----XYZ") {
 		t.Fatalf("tls.certificate: got %v", certificates)
 	}
-	utls := mustMapField(t, tls, "utls")
-	if got := utls["fingerprint"]; got != "firefox" {
-		t.Fatalf("tls.utls.fingerprint: got %v", got)
+	if _, exists := tls["utls"]; exists {
+		t.Fatal("Hysteria2 must not enable uTLS")
+	}
+	pins := mustSliceField(t, tls, "certificate_sha256")
+	if !containsAnyString(pins, "c083d33c12db8a02d88a5169fb9cee3dae9291fffe38c579891a9dcff55304fb") {
+		t.Fatalf("certificate pin lost: %v", pins)
 	}
 }
 
@@ -1739,9 +1742,8 @@ func TestParseGeneralSubscription_HY2URIAliasAndQueryPassword(t *testing.T) {
 	if got := tls["certificate_path"]; got != "/etc/ssl/certs/hy2.pem" {
 		t.Fatalf("tls.certificate_path: got %v", got)
 	}
-	utls := mustMapField(t, tls, "utls")
-	if got := utls["fingerprint"]; got != "chrome" {
-		t.Fatalf("tls.utls.fingerprint: got %v", got)
+	if _, exists := tls["utls"]; exists {
+		t.Fatal("Hysteria2 must not enable uTLS")
 	}
 }
 
@@ -1780,7 +1782,7 @@ func TestParseGeneralSubscription_HY2URIUserPassAuth(t *testing.T) {
 	}
 }
 
-func TestParseGeneralSubscription_HY2URIPinSHA256MapsToTLSCertPublicKeyPin(t *testing.T) {
+func TestParseGeneralSubscription_HY2URIPinSHA256MapsToTLSCertificatePin(t *testing.T) {
 	data := []byte("hy2://hy2-password@hy2.example.com:443?pinSHA256=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=&sni=hy2.example.com")
 
 	nodes, err := ParseGeneralSubscription(data)
@@ -1793,9 +1795,9 @@ func TestParseGeneralSubscription_HY2URIPinSHA256MapsToTLSCertPublicKeyPin(t *te
 
 	obj := parseNodeRaw(t, nodes[0].RawOptions)
 	tls := mustMapField(t, obj, "tls")
-	pins := mustSliceField(t, tls, "certificate_public_key_sha256")
+	pins := mustSliceField(t, tls, "certificate_sha256")
 	if !containsAnyString(pins, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=") {
-		t.Fatalf("tls.certificate_public_key_sha256: got %v", pins)
+		t.Fatalf("tls.certificate_sha256: got %v", pins)
 	}
 	if _, hasUTLS := tls["utls"]; hasUTLS {
 		t.Fatalf("tls.utls should be absent when only pinSHA256 is provided: got %v", tls["utls"])

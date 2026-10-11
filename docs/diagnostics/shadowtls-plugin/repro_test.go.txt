@@ -1,0 +1,94 @@
+package outbound
+
+import (
+	"context"
+	"encoding/json"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/Resinat/Resin/internal/subscription"
+	"github.com/sagernet/sing/common"
+	M "github.com/sagernet/sing/common/metadata"
+)
+
+// 通过表示当前行为得到复现，并非业务缺陷已修复。
+func TestDiagnosticShadowTLSPlugin(t *testing.T) {
+	const shadowTLS = `{"type":"shadowtls","tag":"tls-layer","server":"127.0.0.1","server_port":443,"version":3,"password":"st-fixture","tls":{"enabled":true,"server_name":"fixture.invalid"}}`
+	const ssDetour = `{"type":"shadowsocks","tag":"ss-layer","server":"127.0.0.1","server_port":443,"method":"aes-128-gcm","password":"ss-fixture","detour":"tls-layer"}`
+	clash := func(extra string) string {
+		return `{"proxies":[{"name":"ss-fixture","type":"ss","server":"127.0.0.1","port":443,"cipher":"aes-128-gcm","password":"ss-fixture"` + extra + `}]}`
+	}
+	cases := []struct {
+		name, input, buildError string
+	}{
+		{"plain_ss", clash(""), ""},
+		{"clash_shadow_tls_plugin", clash(`,"plugin":"shadow-tls","plugin-opts":{"host":"fixture.invalid","password":"st-fixture","version":3}`), "plugin not found: shadow-tls"},
+		{"uri_shadow_tls_plugin", `ss://aes-128-gcm:ss-fixture@127.0.0.1:443?plugin=shadow-tls%3Bhost%3Dfixture.invalid%3Bpassword%3Dst-fixture%3Bversion%3D3`, "plugin not found: shadow-tls"},
+		{"renamed_plugin", clash(`,"plugin":"shadowtls"`), "plugin not found: shadowtls"},
+		{"native_shadowtls", `{"outbounds":[` + shadowTLS + `]}`, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			b := shadowTLSFixtureBuilder(t)
+			nodes, err := subscription.ParseGeneralSubscription([]byte(tc.input))
+			if err != nil || len(nodes) != 1 {
+				t.Fatalf("parse: nodes=%d err=%v", len(nodes), err)
+			}
+			t.Logf("converted: %s", nodes[0].RawOptions)
+			ob, err := b.Build(nodes[0].RawOptions)
+			if ob != nil {
+				t.Cleanup(func() { _ = common.Close(ob) })
+			}
+			if tc.buildError == "" {
+				if err != nil {
+					t.Fatal(err)
+				}
+				t.Log("build succeeded; no remote connectivity tested")
+			} else {
+				if err == nil || !strings.Contains(err.Error(), tc.buildError) {
+					t.Fatalf("build: got %v, want %q", err, tc.buildError)
+				}
+				t.Logf("reproduced: outbound build: %v", err)
+			}
+		})
+	}
+	t.Run("native_chain_requires_registration", func(t *testing.T) {
+		b := shadowTLSFixtureBuilder(t)
+		nodes, err := subscription.ParseGeneralSubscription([]byte(`{"outbounds":[` + shadowTLS + `,` + ssDetour + `]}`))
+		if err != nil || len(nodes) != 2 {
+			t.Fatalf("parse: nodes=%d err=%v", len(nodes), err)
+		}
+		// 即使先构建被引用的 ShadowTLS，当前 Build 也不会向 sing-box 管理器注册。
+		for _, raw := range []json.RawMessage{nodes[0].RawOptions, nodes[1].RawOptions} {
+			ob, err := b.Build(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = common.Close(ob) })
+			if ob.Type() != "shadowsocks" {
+				continue
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			conn, err := ob.DialContext(ctx, "tcp", M.ParseSocksaddr("127.0.0.1:80"))
+			if conn != nil {
+				_ = conn.Close()
+			}
+			if err == nil || !strings.Contains(err.Error(), "outbound detour not found: tls-layer") {
+				t.Fatalf("dial: got %v, want missing detour", err)
+			}
+			t.Logf("reproduced with native pair: %v", err)
+		}
+	})
+}
+
+func shadowTLSFixtureBuilder(t *testing.T) *SingboxBuilder {
+	t.Helper()
+	b, err := NewSingboxBuilderWithConfig(SingboxBuilderConfig{DNSUpstreams: []string{"udp://127.0.0.1:53", "local"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = b.Close() })
+	return b
+}
