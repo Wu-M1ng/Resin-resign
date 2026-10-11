@@ -139,7 +139,7 @@ func TestPublicFeedCanUseOriginalSubscriptionSourceWithoutPlatform(t *testing.T)
 	}
 }
 
-func TestPublicClashFeedPreservesShadowTLSPluginOptions(t *testing.T) {
+func TestPublicFeedPreservesShadowTLSPluginLayers(t *testing.T) {
 	srv, cp, _ := newControlPlaneTestServer(t)
 	sub := subscription.NewSubscription("shadowtls-feed-sub", "Plugin fixture", "https://example.com/feed", true, false)
 	cp.SubMgr.Register(sub)
@@ -152,7 +152,7 @@ func TestPublicClashFeedPreservesShadowTLSPluginOptions(t *testing.T) {
 	sub.ManagedNodes().StoreNode(hash, subscription.ManagedNode{Tags: []string{nodes[0].Tag}})
 	created := doJSONRequest(t, srv, http.MethodPost, "/api/v1/feeds", map[string]any{
 		"name": "Plugin feed", "subscription_ids": []string{sub.ID},
-		"default_format": "clash-meta", "enabled_formats": []string{"clash-meta"}, "unsupported_policy": "error",
+		"default_format": "clash-meta", "enabled_formats": []string{"clash-meta", "singbox"}, "unsupported_policy": "error",
 	}, true)
 	if created.Code != http.StatusCreated {
 		t.Fatalf("create feed: status=%d body=%s", created.Code, created.Body.String())
@@ -175,6 +175,24 @@ func TestPublicClashFeedPreservesShadowTLSPluginOptions(t *testing.T) {
 	}
 	if proxy["client-fingerprint"] != "chrome" || proxy["plugin"] != "shadow-tls" {
 		t.Fatalf("public feed lost plugin/client fingerprint: %#v", proxy)
+	}
+	native := publicFeedRequest(srv, http.MethodGet, "/sub/"+token+"/singbox", "")
+	if native.Code != http.StatusOK {
+		t.Fatalf("native feed: status=%d body=%s", native.Code, native.Body.String())
+	}
+	var config struct{ Outbounds []map[string]any }
+	if err := json.Unmarshal(native.Body.Bytes(), &config); err != nil || len(config.Outbounds) != 2 {
+		t.Fatalf("native plugin expansion: nodes=%d err=%v", len(config.Outbounds), err)
+	}
+	inner, outer := config.Outbounds[0], config.Outbounds[1]
+	if inner["type"] != "shadowsocks" || inner["password"] != proxy["password"] || inner["method"] != proxy["cipher"] || inner["plugin"] != nil || inner["plugin_opts"] != nil || inner["detour"] != outer["tag"] {
+		t.Fatal("public native feed lost inner SS credentials or detour")
+	}
+	if outer["type"] != "shadowtls" || outer["password"] != opts["password"] || outer["server"] != proxy["server"] || outer["version"] != float64(3) {
+		t.Fatal("public native feed lost outer ShadowTLS fields")
+	}
+	if native.Header().Get("X-Resin-Skipped-Count") != "0" {
+		t.Fatal("generated transport must not produce a skipped source node")
 	}
 }
 

@@ -46,6 +46,8 @@ Clash map 形式的插件参数会正确转义密码中的 `;`、`=` 和反斜�
 
 组合节点在内部通过插件连接，不需要生成两个节点或配置 `detour`。本次不提供通用跨节点 detour 管理。ShadowTLS 包装 TCP；UDP 行为沿用 sing-box 的 Shadowsocks/UoT 配置。
 
+对外订阅使用 `singbox` 格式时，会将该内部插件配置转换为标准的 SS → ShadowTLS 双层出站，避免客户端报 `plugin not found: shadow-tls`。转换保留两层密码及可表达的 TLS 策略；证书固定等原生 sing-box v1.12 不支持的选项按 Feed 的 skip/error 策略处理。格式边界和客户端刷新步骤见 [subscription-feeds.md](subscription-feeds.md)。
+
 ## 更新与验证
 
 1. 重新构建并更新实际运行的 Resin 二进制或镜像。只修改源码不会更新正在运行的服务。

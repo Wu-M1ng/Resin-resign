@@ -9,9 +9,10 @@ import (
 )
 
 type feedDependency struct {
-	raw map[string]any
-	err error
-	dep int
+	raw       map[string]any
+	transport map[string]any // Generated native transport for an SS plugin node.
+	err       error
+	dep       int
 }
 
 // prepareFeedDependencies resolves original tags before exporters rename them.
@@ -72,6 +73,21 @@ func prepareFeedDependencies(nodes []ExportNode, format Format, options ExportOp
 			}
 		}
 	}
+	// Convert before checking dependency failures so a rejected plugin also
+	// rejects nodes depending on it; never leave a dangling native detour.
+	if format == FormatSingbox {
+		for i := range entries {
+			e := &entries[i]
+			if e.err != nil {
+				continue
+			}
+			inner, outer, err := expandShadowTLSPlugin(e.raw)
+			e.err = err
+			if err == nil {
+				e.raw, e.transport = inner, outer
+			}
+		}
+	}
 	// Reject cycles and broken dependencies, including failures further down a chain.
 	state := make([]uint8, len(entries))
 	var visit func(int) error
@@ -127,6 +143,21 @@ func prepareFeedDependencies(nodes []ExportNode, format Format, options ExportOp
 		}
 		allocated[tags[i]] = true
 	}
+	// Reserve every source tag first, including source names matching this suffix.
+	for i := range entries {
+		e := &entries[i]
+		if e.transport == nil || e.err != nil {
+			continue
+		}
+		base := tags[i] + " [ShadowTLS]"
+		tag := base
+		for suffix := 2; allocated[tag]; suffix++ {
+			tag = fmt.Sprintf("%s (%d)", base, suffix)
+		}
+		allocated[tag] = true
+		e.transport["tag"] = tag
+		e.raw["detour"] = tag
+	}
 	prepared := make([]ExportNode, 0, len(nodes))
 	var dropped ExportResult
 	skipped := make(map[string]struct{})
@@ -152,7 +183,11 @@ func prepareFeedDependencies(nodes []ExportNode, format Format, options ExportOp
 			continue
 		}
 		if format == FormatSingbox && e.dep >= 0 {
-			e.raw["detour"] = tags[e.dep]
+			if e.transport != nil {
+				e.transport["detour"] = tags[e.dep]
+			} else {
+				e.raw["detour"] = tags[e.dep]
+			}
 		}
 		item.Tag = tags[i]
 		var err error
@@ -161,6 +196,13 @@ func prepareFeedDependencies(nodes []ExportNode, format Format, options ExportOp
 			return nil, ExportResult{}, fmt.Errorf("feed: encode prepared outbound: %w", err)
 		}
 		prepared = append(prepared, item)
+		if e.transport != nil {
+			raw, err := json.Marshal(e.transport)
+			if err != nil {
+				return nil, ExportResult{}, fmt.Errorf("feed: encode native ShadowTLS transport: %w", err)
+			}
+			prepared = append(prepared, ExportNode{Tag: e.transport["tag"].(string), RawOptions: raw})
+		}
 	}
 	dropped.SkippedTypes = skippedType(skipped)
 	return prepared, dropped, nil

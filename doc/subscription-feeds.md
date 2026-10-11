@@ -29,13 +29,56 @@ https://你的域名/sub/<token>/uri
 | 格式 | 适用客户端 | 第一版协议范围 |
 | --- | --- | --- |
 | `clash-meta` | Clash.Meta、Mihomo | HTTP、SOCKS、SS、VMess、Trojan、VLESS、Hysteria、Hysteria2、TUIC、WireGuard |
-| `singbox` | sing-box | 保留原生 outbound 字段，并按输出标签重写 `detour` 引用 |
+| `singbox` | sing-box | 保留原生 outbound 字段，重写 `detour` 引用；SS 的 ShadowTLS 插件转换为原生双层出站 |
 | `v2ray-base64` | v2rayN 等 | VMess、VLESS、Trojan、SS、Hysteria2、HTTP、HTTPS、非 TLS SOCKS5 |
 | `uri` | 通用客户端 | 与 `v2ray-base64` 相同，返回纯文本 URI 行 |
 
 不能可靠表达的协议按 Feed 的“不支持协议处理”执行：`skip` 跳过并通过 `X-Resin-Skipped-Count`、`X-Resin-Skipped-Types` 报告，`error` 直接拒绝本次输出。
 
 Clash 输出会将 SS 的 SIP003 插件参数转换为 `plugin-opts` 对象。ShadowTLS 的 `host`、插件密码、整数 `version` 和 TLS 选项会保留，`client-fingerprint` 放在节点顶层；simple-obfs 使用 Clash 的 `obfs` 名称及 `mode`、`host` 字段。缺少必要参数或无法表达的选项按上述策略处理。如果客户端导入时提示 `Null check operator used on a null value`，且 SS 节点只有 `plugin: shadow-tls`、没有 `plugin-opts`，请更新 Resin 并重新刷新客户端订阅。
+
+### SS + ShadowTLS 插件转原生 sing-box
+
+Resin 运行时注册了 `shadow-tls` / `shadowtls` SIP003 插件，普通 sing-box 不包含此插件。因此，Resin HTTP 代理可以连接，并不表示原样输出的插件配置能在其他客户端使用。
+
+`singbox` 输出会把已有的 `type: shadowsocks` + `plugin: shadow-tls` 转为两个原生出站：
+
+```json
+{
+  "outbounds": [
+    {
+      "type": "shadowsocks",
+      "tag": "订阅/节点",
+      "server": "node.example.com",
+      "server_port": 18801,
+      "method": "2022-blake3-aes-256-gcm",
+      "password": "<原 SS 密码>",
+      "network": "tcp",
+      "detour": "订阅/节点 [ShadowTLS]"
+    },
+    {
+      "type": "shadowtls",
+      "tag": "订阅/节点 [ShadowTLS]",
+      "server": "node.example.com",
+      "server_port": 18801,
+      "version": 3,
+      "password": "<原 ShadowTLS 插件密码>",
+      "tls": {
+        "enabled": true,
+        "server_name": "www.php.net",
+        "insecure": false,
+        "alpn": ["h2", "http/1.1"]
+      }
+    }
+  ]
+}
+```
+
+两层密码分别保留，SS 入口沿用原来的显示名称；生成的传输层名称遇到重名会添加序号。客户端应选择、测速 SS 入口，带 `[ShadowTLS]` 后缀的是它的传输依赖。节点数按实际出站条目计算，一个组合节点通常输出两条，跳过数仍按无法转换的源节点计算。
+
+插件省略版本时显式输出 **v2**，省略 ALPN 时保留插件的 `h2` / `http/1.1` 默认值；显式 `alpn=` 则保持无 ALPN。SNI、证书验证开关、支持的 uTLS 指纹和转义后的密码均会保留。已有 detour、DNS 解析器、绑定接口和连接超时等拨号设置移到外层，UoT/multiplex 设置留在 SS 层。未启用 UoT/multiplex 时默认输出 TCP；显式要求原始 UDP 的配置按不支持策略处理，因为原生 ShadowTLS 不能传输原始 UDP。
+
+sing-box v1.12 的原生 TLS 字段无法表达 Resin 插件的证书指纹 `fingerprint` 和公钥固定 `certificate_public_key_sha256`，这类节点按 `skip` / `error` 处理，不会删除验证要求后继续输出。缺少 SS 密码、插件密码、SNI，或含未知/冲突参数的节点也按该策略处理；依赖失败节点的其他出站同时跳过，避免悬空 detour。
 
 ### 原生 SS → ShadowTLS 配对输出
 
@@ -49,7 +92,11 @@ Clash 输出会将 SS 的 SIP003 插件参数转换为 `plugin-opts` 对象。Sh
 
 只有独立 ShadowTLS 时无法推导 SS 加密方式和密码，导出会跳过或报错。缺失引用、循环引用、歧义引用，以及合并时无法保留语义的选项（例如自定义 CA、多级 detour、额外插件和 UoT）也按 `skip` / `error` 处理；复杂原生配置可以使用 `singbox` 格式保留。合并掉的外层属于已使用的依赖，不计入跳过数量；Clash/URI 的节点数为合并后的数量，sing-box 为实际输出的出站条目数量。
 
-Karing 建议使用启用的 `/sub/<token>/clash-meta` 地址。对于原生配对，Feed 选择“原始订阅来源”，以便同时取得两层；平台来源仍只导出平台内的节点。本次转换仅在导出时生效，不改变 Resin 运行时的跨节点 detour 支持。更新 Resin 二进制或镜像后，在 Karing 刷新订阅即可；若源订阅本身不完整，需要先从上游取得完整配置。
+对于 Karing 中的 `plugin not found: shadow-tls`，更新 Resin 二进制或镜像，启用 Feed 的 `singbox` 格式，并将客户端订阅地址切换到 `/sub/<token>/singbox` 后刷新。若旧的错误条目仍被缓存，可删除该客户端订阅再重新添加。客户端须保留两条出站及其 detour 引用；仅导入一个独立 `shadowtls` 或丢失引用仍无法连接。原生 sing-box 的 SS2022 + ShadowTLS 1/2/3 实际数据往返已有本地回归测试，Karing 的导入器行为仍需在客户端确认。Clash/Mihomo 可继续使用完整的 `clash-meta` 组合节点。
+
+Clash 输出还通过了独立 Mihomo v1.19.32 的本地 SS2022 + ShadowTLS v2/v3 数据往返测试。Karing 历史转换器存在将此组合直接变成独立 ShadowTLS 的代码路径，与用户报告吻合；这不等于当前 Karing 已验证兼容。证据、测试命令和版本限制见 [Karing 的 ShadowTLS 导入核查](karing-shadowtls-compatibility.md)。
+
+对于源订阅原本就是两条原生出站的情况，Feed 选择“原始订阅来源”，以便同时取得两层；平台来源仍只导出平台内的节点。转换仅在导出时生效，不改变 Resin 运行时的跨节点 detour 支持；源订阅本身不完整时仍需先从上游取得完整配置。
 
 ## 安全和反代
 
