@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
@@ -174,6 +175,81 @@ func TestPublicClashFeedPreservesShadowTLSPluginOptions(t *testing.T) {
 	}
 	if proxy["client-fingerprint"] != "chrome" || proxy["plugin"] != "shadow-tls" {
 		t.Fatalf("public feed lost plugin/client fingerprint: %#v", proxy)
+	}
+}
+
+func TestPublicFeedCombinesShadowTLSWithinSourceSubscription(t *testing.T) {
+	srv, cp, _ := newControlPlaneTestServer(t)
+	sourceIDs := []string{"source-a", "source-b"}
+	for _, id := range sourceIDs {
+		sub := subscription.NewSubscription(id, id, "https://example.com/feed", true, false)
+		cp.SubMgr.Register(sub)
+		for _, raw := range []map[string]any{
+			{"type": "shadowsocks", "tag": "ss", "server": "127.0.0.1", "server_port": 10000, "method": "aes-128-gcm", "password": "inner-" + id, "detour": "transport"},
+			{"type": "shadowtls", "tag": "transport", "server": id + ".example.com", "server_port": 443, "version": 3, "password": "outer-" + id, "tls": map[string]any{"enabled": true, "server_name": "tls.example.com"}},
+		} {
+			originalTag := raw["tag"].(string)
+			// Simulate a pool entry first inserted under a different alias.
+			if raw["type"] == "shadowtls" {
+				raw["tag"] = "old-transport-alias"
+			}
+			encoded, err := json.Marshal(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+			hash := node.HashFromRawOptions(encoded)
+			cp.Pool.AddNodeFromSub(hash, encoded, id)
+			sub.ManagedNodes().StoreNode(hash, subscription.ManagedNode{Tags: []string{originalTag}})
+		}
+	}
+	created := doJSONRequest(t, srv, http.MethodPost, "/api/v1/feeds", map[string]any{
+		"name": "Paired feed", "subscription_ids": sourceIDs,
+		"default_format": "clash-meta", "enabled_formats": []string{"clash-meta", "singbox"}, "unsupported_policy": "error",
+	}, true)
+	if created.Code != http.StatusCreated {
+		t.Fatalf("create feed: status=%d body=%s", created.Code, created.Body.String())
+	}
+	token, _ := decodeJSONMap(t, created)["public_token"].(string)
+	public := publicFeedRequest(srv, http.MethodGet, "/sub/"+token+"/clash-meta", "")
+	if public.Code != http.StatusOK {
+		t.Fatalf("fetch feed: status=%d body=%s", public.Code, public.Body.String())
+	}
+	var payload struct {
+		Proxies []map[string]any `yaml:"proxies"`
+	}
+	if err := yaml.Unmarshal(public.Body.Bytes(), &payload); err != nil || len(payload.Proxies) != 2 {
+		t.Fatalf("decode feed: nodes=%d err=%v", len(payload.Proxies), err)
+	}
+	for _, proxy := range payload.Proxies {
+		id := "source-a"
+		if proxy["name"] == "source-b/ss" {
+			id = "source-b"
+		}
+		opts, _ := proxy["plugin-opts"].(map[string]any)
+		if proxy["server"] != id+".example.com" || proxy["password"] != "inner-"+id || opts["password"] != "outer-"+id {
+			t.Fatalf("cross-source pairing or missing credentials: %#v", proxy)
+		}
+	}
+	native := publicFeedRequest(srv, http.MethodGet, "/sub/"+token+"/singbox", "")
+	if native.Code != http.StatusOK {
+		t.Fatalf("native feed: status=%d body=%s", native.Code, native.Body.String())
+	}
+	var config struct {
+		Outbounds []map[string]any `json:"outbounds"`
+	}
+	if err := json.Unmarshal(native.Body.Bytes(), &config); err != nil || len(config.Outbounds) != 4 {
+		t.Fatalf("native config: nodes=%d err=%v", len(config.Outbounds), err)
+	}
+	for _, ob := range config.Outbounds {
+		if ob["type"] == "shadowsocks" {
+			id := "source-a"
+			if ob["tag"] == "source-b/ss" {
+				id = "source-b"
+			}
+			if ob["detour"] != id+"/transport" {
+				t.Fatalf("native detour mismatch: %#v", ob)
+			}
+		}
 	}
 }
 

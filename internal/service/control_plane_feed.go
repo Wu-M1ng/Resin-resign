@@ -531,7 +531,7 @@ func (s *ControlPlaneService) buildFeedNodes(m model.SubscriptionFeed, relayToke
 		if tag == "" {
 			tag = h.Hex()
 		}
-		items = append(items, feed.ExportNode{Hash: h, Tag: tag, RawOptions: append([]byte(nil), entry.RawOptions...), Region: entry.GetRegion(nil)})
+		items = append(items, feed.ExportNode{Hash: h, Tag: tag, RawOptions: append([]byte(nil), entry.RawOptions...), Region: entry.GetRegion(nil), SourceTags: s.feedSourceTags(entry, h, allowedSubs)})
 		return true
 	})
 	sort.Slice(items, func(i, j int) bool {
@@ -632,6 +632,7 @@ func (s *ControlPlaneService) buildSubscriptionFeedNodes(allowedSubs map[string]
 			Tag:        tag,
 			RawOptions: append([]byte(nil), entry.RawOptions...),
 			Region:     entry.GetRegion(nil),
+			SourceTags: s.feedSourceTags(entry, hash, allowedSubs),
 		})
 	}
 	sort.Slice(items, func(i, j int) bool {
@@ -641,6 +642,28 @@ func (s *ControlPlaneService) buildSubscriptionFeedNodes(allowedSubs map[string]
 		return items[i].Tag < items[j].Tag
 	})
 	return items, nil
+}
+
+// Preserve source-local aliases independently of display names and pool dedup.
+func (s *ControlPlaneService) feedSourceTags(entry *node.NodeEntry, h node.Hash, allowed map[string]struct{}) map[string][]string {
+	tags := make(map[string][]string)
+	if s.SubMgr == nil {
+		return tags
+	}
+	for _, id := range entry.SubscriptionIDs() {
+		if _, selected := allowed[id]; len(allowed) > 0 && !selected {
+			continue
+		}
+		sub := s.SubMgr.Lookup(id)
+		if sub == nil || !sub.Enabled() {
+			continue
+		}
+		managed, ok := sub.ManagedNodes().LoadNode(h)
+		if ok && !managed.Evicted {
+			tags[id] = append([]string(nil), managed.Tags...)
+		}
+	}
+	return tags
 }
 
 func (s *ControlPlaneService) resolveFeedTag(entry *node.NodeEntry, h node.Hash, allowed map[string]struct{}) string {

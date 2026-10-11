@@ -29,13 +29,27 @@ https://你的域名/sub/<token>/uri
 | 格式 | 适用客户端 | 第一版协议范围 |
 | --- | --- | --- |
 | `clash-meta` | Clash.Meta、Mihomo | HTTP、SOCKS、SS、VMess、Trojan、VLESS、Hysteria、Hysteria2、TUIC、WireGuard |
-| `singbox` | sing-box | Resin 已解析的 sing-box outbound 原样输出 |
+| `singbox` | sing-box | 保留原生 outbound 字段，并按输出标签重写 `detour` 引用 |
 | `v2ray-base64` | v2rayN 等 | VMess、VLESS、Trojan、SS、Hysteria2、HTTP、HTTPS、非 TLS SOCKS5 |
 | `uri` | 通用客户端 | 与 `v2ray-base64` 相同，返回纯文本 URI 行 |
 
 不能可靠表达的协议按 Feed 的“不支持协议处理”执行：`skip` 跳过并通过 `X-Resin-Skipped-Count`、`X-Resin-Skipped-Types` 报告，`error` 直接拒绝本次输出。
 
 Clash 输出会将 SS 的 SIP003 插件参数转换为 `plugin-opts` 对象。ShadowTLS 的 `host`、插件密码、整数 `version` 和 TLS 选项会保留，`client-fingerprint` 放在节点顶层；simple-obfs 使用 Clash 的 `obfs` 名称及 `mode`、`host` 字段。缺少必要参数或无法表达的选项按上述策略处理。如果客户端导入时提示 `Null check operator used on a null value`，且 SS 节点只有 `plugin: shadow-tls`、没有 `plugin-opts`，请更新 Resin 并重新刷新客户端订阅。
+
+### 原生 SS → ShadowTLS 配对输出
+
+如果原始订阅包含 `type: shadowsocks` 节点，且它的 `detour` 指向同一订阅中的 `type: shadowtls` 节点，导出会识别这对配置：
+
+- `clash-meta`：合并为一个 `type: ss`、`plugin: shadow-tls` 节点，输出完整的 `plugin-opts`，并关闭 UDP。
+- `uri` / `v2ray-base64`：合并为带 SIP003 `plugin` 查询参数的 SS 链接。该组合用于 TCP；客户端须支持 ShadowTLS 插件，不能把 UDP 当成经过 ShadowTLS 保护的流量。
+- `singbox`：保留两个原生出站，同步修改 `tag` 与 `detour`；客户端应选择、测速 SS 内层节点。不会把 Resin 的内部 ShadowTLS 插件扩展写入这对原生配置。
+
+内层 SS 的加密方式和密码、外层 ShadowTLS 的服务器、版本、密码及 TLS 参数分别来自原始配置。未填写版本的原生 ShadowTLS 按 **v1** 输出，不套用插件的 v2 默认值。多个 SS 节点可以共享同一个外层；节点去重后的原始标签别名也会保留用于配对。同名标签只在同一个来源订阅内解析；如果一个去重节点在不同订阅中指向不同外层，会按不支持策略处理，建议分别创建 Feed。
+
+只有独立 ShadowTLS 时无法推导 SS 加密方式和密码，导出会跳过或报错。缺失引用、循环引用、歧义引用，以及合并时无法保留语义的选项（例如自定义 CA、多级 detour、额外插件和 UoT）也按 `skip` / `error` 处理；复杂原生配置可以使用 `singbox` 格式保留。合并掉的外层属于已使用的依赖，不计入跳过数量；Clash/URI 的节点数为合并后的数量，sing-box 为实际输出的出站条目数量。
+
+Karing 建议使用启用的 `/sub/<token>/clash-meta` 地址。对于原生配对，Feed 选择“原始订阅来源”，以便同时取得两层；平台来源仍只导出平台内的节点。本次转换仅在导出时生效，不改变 Resin 运行时的跨节点 detour 支持。更新 Resin 二进制或镜像后，在 Karing 刷新订阅即可；若源订阅本身不完整，需要先从上游取得完整配置。
 
 ## 安全和反代
 

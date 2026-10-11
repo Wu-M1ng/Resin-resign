@@ -102,7 +102,22 @@ func toURI(raw map[string]any, name string) (string, error) {
 			return "", fmt.Errorf("feed: shadowsocks outbound %q has no method/password", name)
 		}
 		userinfo := base64.RawURLEncoding.EncodeToString([]byte(method + ":" + password))
-		return "ss://" + userinfo + "@" + address + "#" + escapeURIComponent(name), nil
+		values := url.Values{}
+		if plugin, ok := stringValue(raw, "plugin"); ok {
+			opts, err := clashPluginOptions(raw["plugin_opts"])
+			if err != nil {
+				return "", err
+			}
+			parts := make(map[string]string, len(opts))
+			for key, value := range opts {
+				parts[key] = fmt.Sprint(value)
+			}
+			if encoded := encodePluginOptions(parts); encoded != "" {
+				plugin += ";" + encoded
+			}
+			values.Set("plugin", plugin)
+		}
+		return "ss://" + userinfo + "@" + address + queryFragment(values, name), nil
 	case "hysteria2":
 		password, ok := requiredString(raw, "password")
 		if !ok {

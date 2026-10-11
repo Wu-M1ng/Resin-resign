@@ -83,6 +83,9 @@ func toClashProxy(raw map[string]any, name string) (map[string]any, error) {
 			return nil, fmt.Errorf("feed: shadowsocks outbound %q has no method/password", name)
 		}
 		proxy["type"], proxy["cipher"], proxy["password"] = "ss", method, password
+		if raw["network"] == "tcp" {
+			proxy["udp"] = false
+		}
 		if err := applyClashSSPlugin(raw, proxy); err != nil {
 			return nil, fmt.Errorf("feed: shadowsocks outbound %q: %w", name, err)
 		}

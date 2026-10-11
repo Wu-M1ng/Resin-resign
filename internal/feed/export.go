@@ -35,6 +35,9 @@ type ExportNode struct {
 	Tags       []string
 	RawOptions json.RawMessage
 	Region     string
+	// SourceTags records original tag aliases by subscription ID. References may
+	// only resolve within a source; display tags are not dependency identifiers.
+	SourceTags map[string][]string
 }
 
 // ExportOptions controls an export operation.
@@ -61,16 +64,31 @@ func Export(format Format, nodes []ExportNode, options ExportOptions) (ExportRes
 		return ExportResult{}, fmt.Errorf("feed: unsupported policy %q", options.UnsupportedPolicy)
 	}
 	unique := deduplicateNodes(nodes)
+	prepared, dropped, err := prepareFeedDependencies(unique, format, options)
+	if err != nil {
+		return ExportResult{}, err
+	}
+	var result ExportResult
 	switch format {
 	case FormatSingbox:
-		return exportSingbox(unique, options)
+		result, err = exportSingbox(prepared, options)
 	case FormatClashMeta:
-		return exportClashMeta(unique, options)
+		result, err = exportClashMeta(prepared, options)
 	case FormatV2RayBase64, FormatURI:
-		return exportURI(unique, format, options)
+		result, err = exportURI(prepared, format, options)
 	default:
 		return ExportResult{}, fmt.Errorf("feed: unknown format %q", format)
 	}
+	if err != nil {
+		return ExportResult{}, err
+	}
+	result.SkippedCount += dropped.SkippedCount
+	types := make(map[string]struct{})
+	for _, typ := range append(result.SkippedTypes, dropped.SkippedTypes...) {
+		types[typ] = struct{}{}
+	}
+	result.SkippedTypes = skippedType(types)
+	return result, nil
 }
 
 func deduplicateNodes(nodes []ExportNode) []ExportNode {

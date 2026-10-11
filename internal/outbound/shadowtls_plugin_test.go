@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Resinat/Resin/internal/feed"
+	"github.com/Resinat/Resin/internal/node"
 	"github.com/Resinat/Resin/internal/subscription"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-shadowsocks/shadowaead"
@@ -109,6 +111,7 @@ func TestShadowTLSPluginSubscriptionRoundTrip(t *testing.T) {
 		name                                                    string
 		version                                                 int
 		clientFingerprint                                       string
+		feedFormat                                              feed.Format
 		wrongPassword, wrongPin, uri, concurrent, stringOptions bool
 	}{
 		{name: "v1", version: 1},
@@ -116,6 +119,8 @@ func TestShadowTLSPluginSubscriptionRoundTrip(t *testing.T) {
 		{name: "v2_utls", version: 2, clientFingerprint: "chrome"},
 		{name: "v3", version: 3},
 		{name: "v3_uri", version: 3, uri: true},
+		{name: "v3_feed_clash", version: 3, feedFormat: feed.FormatClashMeta},
+		{name: "v3_feed_uri", version: 3, feedFormat: feed.FormatURI},
 		{name: "v3_string_trailing_separator", version: 3, clientFingerprint: "chrome", stringOptions: true},
 		{name: "v3_utls_concurrent", version: 3, clientFingerprint: "chrome", concurrent: true},
 		{name: "v3_wrong_password", version: 3, wrongPassword: true},
@@ -162,6 +167,24 @@ func TestShadowTLSPluginSubscriptionRoundTrip(t *testing.T) {
 				escape := strings.NewReplacer(`\`, `\\`, `;`, `\;`, `=`, `\=`)
 				opts := "shadow-tls;host=fixture.invalid;version=3;password=" + escape.Replace(password) + ";skip-cert-verify=true;fingerprint=" + pin
 				input = []byte("ss://aes-128-gcm:" + ssPassword + "@" + listener.Addr().String() + "?plugin=" + url.QueryEscape(opts))
+			}
+			if tc.feedFormat != "" {
+				var exportNodes []feed.ExportNode
+				for _, raw := range []map[string]any{
+					{"type": "shadowsocks", "tag": "ss-inner", "server": "127.0.0.1", "server_port": 10000, "method": "aes-128-gcm", "password": ssPassword, "detour": "st-outer"},
+					{"type": "shadowtls", "tag": "st-outer", "server": "127.0.0.1", "server_port": listener.Addr().(*net.TCPAddr).Port, "version": tc.version, "password": password, "tls": map[string]any{"enabled": true, "server_name": "fixture.invalid", "insecure": true}},
+				} {
+					encoded, err := json.Marshal(raw)
+					if err != nil {
+						t.Fatal(err)
+					}
+					exportNodes = append(exportNodes, feed.ExportNode{Hash: node.HashFromRawOptions(encoded), Tag: "source/" + raw["tag"].(string), RawOptions: encoded})
+				}
+				result, err := feed.Export(tc.feedFormat, exportNodes, feed.ExportOptions{UnsupportedPolicy: feed.UnsupportedError})
+				if err != nil || result.NodeCount != 1 {
+					t.Fatalf("export pair: count=%d err=%v", result.NodeCount, err)
+				}
+				input = result.Body
 			}
 			nodes, err := subscription.ParseGeneralSubscription(input)
 			if err != nil || len(nodes) != 1 {
