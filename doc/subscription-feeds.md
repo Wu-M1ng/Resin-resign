@@ -35,6 +35,8 @@ https://你的域名/sub/<token>/uri
 
 不能可靠表达的协议按 Feed 的“不支持协议处理”执行：`skip` 跳过并通过 `X-Resin-Skipped-Count`、`X-Resin-Skipped-Types` 报告，`error` 直接拒绝本次输出。
 
+Clash 输出会将 SS 的 SIP003 插件参数转换为 `plugin-opts` 对象。ShadowTLS 的 `host`、插件密码、整数 `version` 和 TLS 选项会保留，`client-fingerprint` 放在节点顶层；simple-obfs 使用 Clash 的 `obfs` 名称及 `mode`、`host` 字段。缺少必要参数或无法表达的选项按上述策略处理。如果客户端导入时提示 `Null check operator used on a null value`，且 SS 节点只有 `plugin: shadow-tls`、没有 `plugin-opts`，请更新 Resin 并重新刷新客户端订阅。
+
 ## 安全和反代
 
 Token 是读取凭证，拿到完整 URL 即可读取该 Feed，但不能访问管理 API。轮换 Token 会立即使旧 URL 返回 404。生产环境使用 HTTPS，并保留现有 OpenResty 转发：

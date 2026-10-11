@@ -11,6 +11,7 @@ import (
 	"github.com/Resinat/Resin/internal/node"
 	"github.com/Resinat/Resin/internal/subscription"
 	"github.com/Resinat/Resin/internal/testutil"
+	"gopkg.in/yaml.v3"
 )
 
 func TestPublicFeedLifecycleKeepsTokenAcrossEdits(t *testing.T) {
@@ -134,6 +135,45 @@ func TestPublicFeedCanUseOriginalSubscriptionSourceWithoutPlatform(t *testing.T)
 	public := publicFeedRequest(srv, http.MethodGet, "/sub/"+token+"/uri", "")
 	if public.Code != http.StatusOK || public.Body.Len() == 0 {
 		t.Fatalf("source-only public feed response: status=%d body=%q", public.Code, public.Body.String())
+	}
+}
+
+func TestPublicClashFeedPreservesShadowTLSPluginOptions(t *testing.T) {
+	srv, cp, _ := newControlPlaneTestServer(t)
+	sub := subscription.NewSubscription("shadowtls-feed-sub", "Plugin fixture", "https://example.com/feed", true, false)
+	cp.SubMgr.Register(sub)
+	nodes, err := subscription.ParseGeneralSubscription([]byte(`{"proxies":[{"name":"shadowtls-fixture","type":"ss","server":"node.example.com","port":18801,"cipher":"2022-blake3-aes-256-gcm","password":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=","plugin":"shadow-tls","client-fingerprint":"chrome","plugin-opts":{"host":"tls.example.com","password":"plugin-fixture","version":3}}]}`))
+	if err != nil || len(nodes) != 1 {
+		t.Fatalf("parse source: nodes=%d err=%v", len(nodes), err)
+	}
+	hash := node.HashFromRawOptions(nodes[0].RawOptions)
+	cp.Pool.AddNodeFromSub(hash, nodes[0].RawOptions, sub.ID)
+	sub.ManagedNodes().StoreNode(hash, subscription.ManagedNode{Tags: []string{nodes[0].Tag}})
+	created := doJSONRequest(t, srv, http.MethodPost, "/api/v1/feeds", map[string]any{
+		"name": "Plugin feed", "subscription_ids": []string{sub.ID},
+		"default_format": "clash-meta", "enabled_formats": []string{"clash-meta"}, "unsupported_policy": "error",
+	}, true)
+	if created.Code != http.StatusCreated {
+		t.Fatalf("create feed: status=%d body=%s", created.Code, created.Body.String())
+	}
+	token, _ := decodeJSONMap(t, created)["public_token"].(string)
+	public := publicFeedRequest(srv, http.MethodGet, "/sub/"+token+"/clash-meta", "")
+	if public.Code != http.StatusOK {
+		t.Fatalf("fetch feed: status=%d body=%s", public.Code, public.Body.String())
+	}
+	var payload struct {
+		Proxies []map[string]any `yaml:"proxies"`
+	}
+	if err := yaml.Unmarshal(public.Body.Bytes(), &payload); err != nil || len(payload.Proxies) != 1 {
+		t.Fatalf("decode feed: proxies=%d err=%v", len(payload.Proxies), err)
+	}
+	proxy := payload.Proxies[0]
+	opts, ok := proxy["plugin-opts"].(map[string]any)
+	if !ok || opts["host"] != "tls.example.com" || opts["password"] != "plugin-fixture" || opts["version"] != 3 {
+		t.Fatalf("public feed lost plugin options: %#v", proxy)
+	}
+	if proxy["client-fingerprint"] != "chrome" || proxy["plugin"] != "shadow-tls" {
+		t.Fatalf("public feed lost plugin/client fingerprint: %#v", proxy)
 	}
 }
 
