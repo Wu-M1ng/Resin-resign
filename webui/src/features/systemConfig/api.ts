@@ -11,6 +11,7 @@ const DEFAULT_CONFIG: RuntimeConfig = {
   reverse_proxy_log_resp_headers_max_bytes: 0,
   reverse_proxy_log_resp_body_max_bytes: 0,
   max_consecutive_failures: 0,
+  max_probe_failures: 0,
   max_latency_test_interval: "",
   max_authority_latency_test_interval: "",
   max_egress_test_interval: "",
@@ -62,6 +63,7 @@ function normalizeRuntimeConfig(raw: Partial<RuntimeConfig> | null | undefined):
       DEFAULT_CONFIG.reverse_proxy_log_resp_body_max_bytes,
     ),
     max_consecutive_failures: asNumber(raw.max_consecutive_failures, DEFAULT_CONFIG.max_consecutive_failures),
+    max_probe_failures: asNumber(raw.max_probe_failures, DEFAULT_CONFIG.max_probe_failures),
     max_latency_test_interval: asString(raw.max_latency_test_interval, DEFAULT_CONFIG.max_latency_test_interval),
     max_authority_latency_test_interval: asString(
       raw.max_authority_latency_test_interval,

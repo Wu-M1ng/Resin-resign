@@ -299,6 +299,7 @@ func (s *SubscriptionScheduler) UpdateSubscription(sub *subscription.Subscriptio
 				continue
 			}
 			s.pool.AddNodeFromSub(h, raw, sub.ID)
+			s.pool.ResetDormantNode(h)
 		}
 		for _, h := range kept {
 			managed, ok := mergedManagedNodes.LoadNode(h)
@@ -315,6 +316,7 @@ func (s *SubscriptionScheduler) UpdateSubscription(sub *subscription.Subscriptio
 				continue
 			}
 			s.pool.AddNodeFromSub(h, raw, sub.ID)
+			s.pool.ResetDormantNode(h)
 		}
 		for _, h := range removed {
 			s.pool.RemoveNodeFromSub(h, sub.ID)

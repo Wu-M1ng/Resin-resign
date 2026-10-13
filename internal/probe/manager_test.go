@@ -974,3 +974,66 @@ func TestParseCloudflareTrace_NoIP(t *testing.T) {
 		t.Fatal("expected error when ip field is missing")
 	}
 }
+
+func TestProbeManager_PeriodicScan_SkipsDormantNodes(t *testing.T) {
+	subMgr := topology.NewSubscriptionManager()
+	sub := subscription.NewSubscription("sub1", "sub1", "url", true, false)
+	subMgr.Register(sub)
+
+	maxFailures := 5
+	pool := topology.NewGlobalNodePool(topology.PoolConfig{
+		SubLookup:              subMgr.Lookup,
+		MaxLatencyTableEntries: 16,
+		MaxConsecutiveFailures: func() int { return 3 },
+		MaxProbeFailures:       func() int { return maxFailures },
+	})
+
+	hash := node.HashFromRawOptions([]byte(`{"type":"dormant-node"}`))
+	pool.AddNodeFromSub(hash, []byte(`{"type":"dormant-node"}`), "sub1")
+	sub.ManagedNodes().StoreNode(hash, subscription.ManagedNode{Tags: []string{"tag"}})
+
+	entry, ok := pool.GetEntry(hash)
+	if !ok {
+		t.Fatal("entry not found")
+	}
+	storeOutbound(entry)
+
+	// Simulate node failing up to maxFailures.
+	entry.FailureCount.Store(int32(maxFailures))
+
+	var calls atomic.Int32
+	mgr := NewProbeManager(ProbeConfig{
+		Pool: pool,
+		Fetcher: func(_ node.Hash, _ string) ([]byte, time.Duration, error) {
+			calls.Add(1)
+			return []byte("ok"), 10 * time.Millisecond, nil
+		},
+	})
+
+	// Periodic scans should skip this dormant node.
+	mgr.scanEgress()
+	mgr.scanLatency()
+
+	time.Sleep(20 * time.Millisecond)
+	if calls.Load() != 0 {
+		t.Fatalf("expected 0 probe calls for dormant node, got %d", calls.Load())
+	}
+
+	// Manual immediate probe should bypass dormant check and execute.
+	var immediateCalled sync.WaitGroup
+	immediateCalled.Add(1)
+	mgr.fetcher = func(_ node.Hash, _ string) ([]byte, time.Duration, error) {
+		defer immediateCalled.Done()
+		calls.Add(1)
+		return []byte("ok"), 10 * time.Millisecond, nil
+	}
+	mgr.Start()
+	defer mgr.Stop()
+
+	mgr.TriggerImmediateLatencyProbe(hash)
+	immediateCalled.Wait()
+
+	if calls.Load() < 1 {
+		t.Fatal("expected immediate probe to execute for dormant node")
+	}
+}

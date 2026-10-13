@@ -22,6 +22,7 @@ type RuntimeConfigForm = {
   reverse_proxy_log_resp_headers_max_bytes: string;
   reverse_proxy_log_resp_body_max_bytes: string;
   max_consecutive_failures: string;
+  max_probe_failures: string;
   max_latency_test_interval: string;
   max_authority_latency_test_interval: string;
   max_egress_test_interval: string;
@@ -41,6 +42,7 @@ const EDITABLE_FIELDS: Array<keyof RuntimeConfig> = [
   "reverse_proxy_log_resp_headers_max_bytes",
   "reverse_proxy_log_resp_body_max_bytes",
   "max_consecutive_failures",
+  "max_probe_failures",
   "max_latency_test_interval",
   "max_authority_latency_test_interval",
   "max_egress_test_interval",
@@ -60,6 +62,7 @@ const FIELD_LABELS: Record<keyof RuntimeConfig, string> = {
   reverse_proxy_log_resp_headers_max_bytes: "响应头最大字节数",
   reverse_proxy_log_resp_body_max_bytes: "响应体最大字节数",
   max_consecutive_failures: "最大连续失败次数",
+  max_probe_failures: "最大探测失败次数（停测休眠）",
   max_latency_test_interval: "节点延迟最大测试间隔",
   max_authority_latency_test_interval: "权威域名最大测试间隔",
   max_egress_test_interval: "出口 IP 更新检查间隔",
@@ -97,6 +100,7 @@ function configToForm(config: RuntimeConfig): RuntimeConfigForm {
     reverse_proxy_log_resp_headers_max_bytes: String(config.reverse_proxy_log_resp_headers_max_bytes),
     reverse_proxy_log_resp_body_max_bytes: String(config.reverse_proxy_log_resp_body_max_bytes),
     max_consecutive_failures: String(config.max_consecutive_failures),
+    max_probe_failures: String(config.max_probe_failures),
     max_latency_test_interval: config.max_latency_test_interval,
     max_authority_latency_test_interval: config.max_authority_latency_test_interval,
     max_egress_test_interval: config.max_egress_test_interval,
@@ -168,6 +172,10 @@ function parseForm(form: RuntimeConfigForm): RuntimeConfig {
       form.reverse_proxy_log_resp_body_max_bytes,
     ),
     max_consecutive_failures: parseNonNegativeInt("最大连续失败次数", form.max_consecutive_failures),
+    max_probe_failures: parseNonNegativeInt(
+      "最大探测失败次数（停测休眠）",
+      form.max_probe_failures,
+    ),
     max_latency_test_interval: parseDurationField("节点延迟最大测试间隔", form.max_latency_test_interval),
     max_authority_latency_test_interval: parseDurationField(
       "权威域名最大测试间隔",
@@ -473,6 +481,22 @@ export function SystemConfigPage() {
                       min={0}
                       value={form.max_consecutive_failures}
                       onChange={(event) => setFormField("max_consecutive_failures", event.target.value)}
+                    />
+                  </div>
+
+                  <div className="field-group">
+                    <div style={{ display: "flex", alignItems: "center" }}>
+                      <label className="field-label" htmlFor="sys-max-probe-fail" style={{ margin: 0 }}>
+                        {t("最大探测失败次数（停测休眠）")}
+                      </label>
+                      {renderRestoreButton("max_probe_failures")}
+                    </div>
+                    <Input
+                      id="sys-max-probe-fail"
+                      type="number"
+                      min={0}
+                      value={form.max_probe_failures}
+                      onChange={(event) => setFormField("max_probe_failures", event.target.value)}
                     />
                   </div>
                 </div>

@@ -1324,3 +1324,39 @@ func TestScheduler_SetSubscriptionEnabled_ReenabledCallbackSkipsAlreadyEnabledSh
 		t.Fatalf("reenabled callback hash = %s, want %s", got[0].Hex(), hRecovered.Hex())
 	}
 }
+
+func TestScheduler_UpdateSubscription_ResetsDormantNodes(t *testing.T) {
+	subMgr := NewSubscriptionManager()
+	sub := subscription.NewSubscription("s1", "TestSub", "http://example.com", true, false)
+	sub.SetFetchConfig(sub.URL(), int64(time.Hour))
+	subMgr.Register(sub)
+
+	pool := newTestPool(subMgr)
+	body := makeSubscriptionJSON(
+		`{"type":"shadowsocks","tag":"us-1","server":"1.1.1.1","server_port":443}`,
+	)
+	fetcher := makeMockFetcher(body, nil)
+	sched := newTestScheduler(subMgr, pool, fetcher)
+
+	// First refresh adds node to pool.
+	sched.UpdateSubscription(sub)
+	if pool.Size() != 1 {
+		t.Fatalf("expected 1 node, got %d", pool.Size())
+	}
+
+	raw := json.RawMessage(`{"type":"shadowsocks","tag":"us-1","server":"1.1.1.1","server_port":443}`)
+	h := node.HashFromRawOptions(raw)
+	entry, ok := pool.GetEntry(h)
+	if !ok {
+		t.Fatal("entry not found")
+	}
+
+	// Simulate node failing until dormant (5 failures).
+	entry.FailureCount.Store(5)
+
+	// Second refresh should reset dormant failure count to 0.
+	sched.UpdateSubscription(sub)
+	if count := entry.FailureCount.Load(); count != 0 {
+		t.Fatalf("expected dormant FailureCount reset to 0 upon subscription refresh, got %d", count)
+	}
+}

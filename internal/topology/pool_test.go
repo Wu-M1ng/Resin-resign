@@ -950,3 +950,85 @@ func TestEphemeralCleaner_SkipsRecentCircuitBreak(t *testing.T) {
 		t.Fatal("recently circuit-broken node should not be evicted yet")
 	}
 }
+
+func TestPool_FailureCount_CappedAtMaxProbeFailures(t *testing.T) {
+	subMgr := NewSubscriptionManager()
+	sub := subscription.NewSubscription("s1", "Sub1", "url", true, false)
+	subMgr.Register(sub)
+
+	maxFailures := 5
+	pool := NewGlobalNodePool(PoolConfig{
+		SubLookup:              subMgr.Lookup,
+		GeoLookup:              func(addr netip.Addr) string { return "us" },
+		MaxLatencyTableEntries: 16,
+		MaxConsecutiveFailures: func() int { return 3 },
+		MaxProbeFailures:       func() int { return maxFailures },
+	})
+
+	raw := json.RawMessage(`{"type":"ss","server":"1.1.1.1"}`)
+	h := node.HashFromRawOptions(raw)
+	pool.AddNodeFromSub(h, raw, "s1")
+
+	// 1 initial success to clear initial circuit-open state.
+	pool.RecordResult(h, true)
+	entry, _ := pool.GetEntry(h)
+	if entry.IsCircuitOpen() || entry.FailureCount.Load() != 0 {
+		t.Fatal("node should be healthy after success")
+	}
+
+	// Record 10 failures.
+	for i := 0; i < 10; i++ {
+		pool.RecordResult(h, false)
+	}
+
+	if count := entry.FailureCount.Load(); count != int32(maxFailures) {
+		t.Fatalf("expected FailureCount capped at %d, got %d", maxFailures, count)
+	}
+	if !entry.IsCircuitOpen() {
+		t.Fatal("expected circuit to be open after failures")
+	}
+
+	// Clamping check: if count was somehow higher, next failure clamps it.
+	entry.FailureCount.Store(43)
+	pool.RecordResult(h, false)
+	if count := entry.FailureCount.Load(); count != int32(maxFailures) {
+		t.Fatalf("expected FailureCount clamped to %d, got %d", maxFailures, count)
+	}
+}
+
+func TestPool_ResetDormantNode(t *testing.T) {
+	subMgr := NewSubscriptionManager()
+	sub := subscription.NewSubscription("s1", "Sub1", "url", true, false)
+	subMgr.Register(sub)
+
+	pool := NewGlobalNodePool(PoolConfig{
+		SubLookup:              subMgr.Lookup,
+		GeoLookup:              func(addr netip.Addr) string { return "us" },
+		MaxLatencyTableEntries: 16,
+		MaxConsecutiveFailures: func() int { return 3 },
+		MaxProbeFailures:       func() int { return 5 },
+	})
+
+	raw := json.RawMessage(`{"type":"ss","server":"1.1.1.1"}`)
+	h := node.HashFromRawOptions(raw)
+	pool.AddNodeFromSub(h, raw, "s1")
+	entry, _ := pool.GetEntry(h)
+
+	// Below cap: ResetDormantNode should return false.
+	entry.FailureCount.Store(3)
+	if pool.ResetDormantNode(h) {
+		t.Fatal("ResetDormantNode should return false when failure count < cap")
+	}
+	if entry.FailureCount.Load() != 3 {
+		t.Fatalf("expected count 3, got %d", entry.FailureCount.Load())
+	}
+
+	// At cap: ResetDormantNode should reset to 0 and return true.
+	entry.FailureCount.Store(5)
+	if !pool.ResetDormantNode(h) {
+		t.Fatal("ResetDormantNode should return true when failure count >= cap")
+	}
+	if entry.FailureCount.Load() != 0 {
+		t.Fatalf("expected count reset to 0, got %d", entry.FailureCount.Load())
+	}
+}

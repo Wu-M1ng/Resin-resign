@@ -48,6 +48,7 @@ type GlobalNodePool struct {
 	// Health config
 	maxLatencyTableEntries int
 	maxConsecutiveFailures func() int
+	maxProbeFailures       func() int
 	latencyDecayWindow     func() time.Duration
 	latencyAuthorities     func() []string
 }
@@ -63,6 +64,7 @@ type PoolConfig struct {
 	OnNodeLatencyChanged   func(hash node.Hash, domain string)
 	MaxLatencyTableEntries int
 	MaxConsecutiveFailures func() int
+	MaxProbeFailures       func() int
 	LatencyDecayWindow     func() time.Duration
 	LatencyAuthorities     func() []string
 }
@@ -92,6 +94,7 @@ func NewGlobalNodePool(cfg PoolConfig) *GlobalNodePool {
 		onNodeLatencyChanged:   cfg.OnNodeLatencyChanged,
 		maxLatencyTableEntries: cfg.MaxLatencyTableEntries,
 		maxConsecutiveFailures: maxConsecutiveFailuresFn,
+		maxProbeFailures:       cfg.MaxProbeFailures,
 		latencyDecayWindow:     cfg.LatencyDecayWindow,
 		latencyAuthorities:     cfg.LatencyAuthorities,
 		platformByID:           make(map[string]*platform.Platform),
@@ -540,8 +543,33 @@ func (p *GlobalNodePool) RecordResult(hash node.Hash, success bool) {
 			circuitStateChanged = true
 		}
 	} else {
-		newCount := entry.FailureCount.Add(1)
-		dynamicChanged = true
+		maxProbeFailures := p.currentMaxProbeFailures()
+		var newCount int32
+		if maxProbeFailures > 0 {
+			for {
+				curr := entry.FailureCount.Load()
+				if int(curr) >= maxProbeFailures {
+					newCount = int32(maxProbeFailures)
+					if curr > int32(maxProbeFailures) {
+						if entry.FailureCount.CompareAndSwap(curr, newCount) {
+							dynamicChanged = true
+						} else {
+							continue
+						}
+					}
+					break
+				}
+				if entry.FailureCount.CompareAndSwap(curr, curr+1) {
+					newCount = curr + 1
+					dynamicChanged = true
+					break
+				}
+			}
+		} else {
+			newCount = entry.FailureCount.Add(1)
+			dynamicChanged = true
+		}
+
 		maxConsecutiveFailures := p.currentMaxConsecutiveFailures()
 		if maxConsecutiveFailures > 0 && int(newCount) >= maxConsecutiveFailures {
 			// Open circuit if not already open.
@@ -581,6 +609,47 @@ func (p *GlobalNodePool) passiveCircuitBreakerDisabled(platformID string) bool {
 		return false
 	}
 	return plat.PassiveCircuitBreakerDisabled
+}
+
+// ResetDormantNode resets FailureCount to 0 if the node reached or exceeded
+// currentMaxProbeFailures, re-enabling periodic probing (e.g. upon subscription refresh).
+func (p *GlobalNodePool) ResetDormantNode(hash node.Hash) bool {
+	entry, ok := p.nodes.Load(hash)
+	if !ok {
+		return false
+	}
+	maxProbeFailures := p.currentMaxProbeFailures()
+	if maxProbeFailures <= 0 {
+		return false
+	}
+	for {
+		curr := entry.FailureCount.Load()
+		if int(curr) < maxProbeFailures {
+			return false
+		}
+		if entry.FailureCount.CompareAndSwap(curr, 0) {
+			if p.onNodeDynamicChanged != nil {
+				p.onNodeDynamicChanged(hash)
+			}
+			return true
+		}
+	}
+}
+
+// CurrentMaxProbeFailures returns the configured threshold where periodic
+// probing stops and failure count is capped (default 5; <= 0 means disabled).
+func (p *GlobalNodePool) CurrentMaxProbeFailures() int {
+	if p == nil {
+		return 5
+	}
+	return p.currentMaxProbeFailures()
+}
+
+func (p *GlobalNodePool) currentMaxProbeFailures() int {
+	if p != nil && p.maxProbeFailures != nil {
+		return p.maxProbeFailures()
+	}
+	return 5
 }
 
 func (p *GlobalNodePool) currentMaxConsecutiveFailures() int {

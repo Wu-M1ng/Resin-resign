@@ -230,6 +230,9 @@ func newTopologyRuntime(
 		MaxConsecutiveFailures: func() int {
 			return runtimeConfigSnapshot(runtimeCfg).MaxConsecutiveFailures
 		},
+		MaxProbeFailures: func() int {
+			return runtimeConfigSnapshot(runtimeCfg).MaxProbeFailures
+		},
 		LatencyDecayWindow: func() time.Duration {
 			return time.Duration(runtimeConfigSnapshot(runtimeCfg).LatencyDecayWindow)
 		},

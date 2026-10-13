@@ -96,6 +96,7 @@ func TestRuntimeConfig_JSONFieldNames(t *testing.T) {
 		"reverse_proxy_log_resp_headers_max_bytes",
 		"reverse_proxy_log_resp_body_max_bytes",
 		"max_consecutive_failures",
+		"max_probe_failures",
 		"max_latency_test_interval",
 		"max_authority_latency_test_interval",
 		"max_egress_test_interval",

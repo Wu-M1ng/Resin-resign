@@ -831,6 +831,7 @@ Note: Once enabled, requests without authentication information are rejected ins
   "总请求": "Total requests",
   "最近错误：{{message}}": "Recent error: {{message}}",
   "配置已更新（{{count}} 项变更）": "Config updated ({{count}} changes)",
+  "最大探测失败次数（停测休眠）": "Max probe failures (dormant)",
 };
 
 export function translateDocumentTitle(locale: AppLocale): string {

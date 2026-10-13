@@ -457,6 +457,11 @@ func (m *ProbeManager) scanEgress() {
 			return true // skip nil outbound
 		}
 
+		maxProbeFailures := m.pool.CurrentMaxProbeFailures()
+		if maxProbeFailures > 0 && int(entry.FailureCount.Load()) >= maxProbeFailures {
+			return true // skip dormant node
+		}
+
 		// Check if due: lastAttempt + interval - lookahead <= now.
 		lastCheck := entry.LastEgressUpdateAttempt.Load()
 		if lastCheck > 0 {
@@ -503,6 +508,11 @@ func (m *ProbeManager) scanLatency() {
 
 		if entry.Outbound.Load() == nil {
 			return true // skip nil outbound
+		}
+
+		maxProbeFailures := m.pool.CurrentMaxProbeFailures()
+		if maxProbeFailures > 0 && int(entry.FailureCount.Load()) >= maxProbeFailures {
+			return true // skip dormant node
 		}
 
 		if !m.isLatencyProbeDue(entry, now, maxLatencyInterval, maxAuthorityInterval, authorities, lookahead) {
@@ -711,6 +721,14 @@ func (m *ProbeManager) isLatencyProbeDue(
 	authorities []string,
 	lookahead time.Duration,
 ) bool {
+	maxProbeFailures := 5
+	if m.pool != nil {
+		maxProbeFailures = m.pool.CurrentMaxProbeFailures()
+	}
+	if maxProbeFailures > 0 && int(entry.FailureCount.Load()) >= maxProbeFailures {
+		return false
+	}
+
 	lastAny := entry.LastLatencyProbeAttempt.Load()
 	if lastAny == 0 {
 		return true

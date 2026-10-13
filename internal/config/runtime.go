@@ -15,6 +15,7 @@ type RuntimeConfig struct {
 
 	// Health check
 	MaxConsecutiveFailures          int      `json:"max_consecutive_failures"`
+	MaxProbeFailures                int      `json:"max_probe_failures"`
 	MaxLatencyTestInterval          Duration `json:"max_latency_test_interval"`
 	MaxAuthorityLatencyTestInterval Duration `json:"max_authority_latency_test_interval"`
 	MaxEgressTestInterval           Duration `json:"max_egress_test_interval"`
@@ -44,6 +45,7 @@ func NewDefaultRuntimeConfig() *RuntimeConfig {
 		ReverseProxyLogRespBodyMaxBytes:    1024,
 
 		MaxConsecutiveFailures:          3,
+		MaxProbeFailures:                5,
 		MaxLatencyTestInterval:          Duration(1 * time.Hour),
 		MaxAuthorityLatencyTestInterval: Duration(3 * time.Hour),
 		MaxEgressTestInterval:           Duration(24 * time.Hour),
